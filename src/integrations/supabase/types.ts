@@ -14,7 +14,222 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alunos: {
+        Row: {
+          created_at: string
+          data_inicio: string
+          endereco_desembarque: string
+          endereco_embarque: string
+          escola: string
+          id: string
+          nome: string
+          ordem_embarque: number | null
+          responsavel_nome: string
+          responsavel_whatsapp: string
+          rota_id: string | null
+          status: string
+          turno: string
+          user_id: string
+          valor_mensalidade: number
+        }
+        Insert: {
+          created_at?: string
+          data_inicio?: string
+          endereco_desembarque?: string
+          endereco_embarque?: string
+          escola?: string
+          id?: string
+          nome: string
+          ordem_embarque?: number | null
+          responsavel_nome: string
+          responsavel_whatsapp: string
+          rota_id?: string | null
+          status?: string
+          turno: string
+          user_id: string
+          valor_mensalidade?: number
+        }
+        Update: {
+          created_at?: string
+          data_inicio?: string
+          endereco_desembarque?: string
+          endereco_embarque?: string
+          escola?: string
+          id?: string
+          nome?: string
+          ordem_embarque?: number | null
+          responsavel_nome?: string
+          responsavel_whatsapp?: string
+          rota_id?: string | null
+          status?: string
+          turno?: string
+          user_id?: string
+          valor_mensalidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alunos_rota_id_fkey"
+            columns: ["rota_id"]
+            isOneToOne: false
+            referencedRelation: "rotas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentos: {
+        Row: {
+          arquivo_url: string | null
+          created_at: string
+          data_vencimento: string
+          id: string
+          status: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          arquivo_url?: string | null
+          created_at?: string
+          data_vencimento: string
+          id?: string
+          status?: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          arquivo_url?: string | null
+          created_at?: string
+          data_vencimento?: string
+          id?: string
+          status?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      frequencias: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          data: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          data?: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          data?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "frequencias_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensalidades: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          data_pagamento: string | null
+          id: string
+          mes_referencia: string
+          status: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          data_pagamento?: string | null
+          id?: string
+          mes_referencia: string
+          status?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          data_pagamento?: string | null
+          id?: string
+          mes_referencia?: string
+          status?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensalidades_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      rotas: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          turno: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          turno: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          turno?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
