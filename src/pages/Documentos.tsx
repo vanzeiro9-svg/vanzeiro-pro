@@ -250,8 +250,3 @@ const Documentos = () => {
 };
 
 export default Documentos;
-    </AppLayout>
-  );
-};
-
-export default Documentos;
