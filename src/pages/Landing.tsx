@@ -67,7 +67,7 @@ const Landing = () => {
           <div className="relative">
             <div className="absolute -inset-4 bg-primary/10 rounded-3xl blur-3xl" />
             <img 
-              src="/vanzeiro_hero_1776205148399.png" 
+              src="/vanzeiro_hero.png" 
               alt="Transportador Escolar Profissional" 
               className="relative rounded-3xl shadow-2xl border-2 border-white"
             />
