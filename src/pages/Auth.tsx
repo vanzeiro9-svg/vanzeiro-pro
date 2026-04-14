@@ -42,16 +42,22 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-background">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="flex flex-col items-center space-y-2">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
-            <Bus className="w-8 h-8 text-primary-foreground" />
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-slate-50 relative overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -mr-32 -mt-32" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/10 blur-[100px] -ml-32 -mb-32" />
+
+      <div className="w-full max-w-sm space-y-8 relative z-10">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-20 h-20 bg-primary rounded-[2rem] flex items-center justify-center shadow-xl shadow-primary/20 rotate-3">
+            <Bus className="w-10 h-10 text-white -rotate-3" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Vanzeiro App</h1>
-          <p className="text-muted-foreground text-center">
-            Gerencie seus alunos, rotas e pagamentos
-          </p>
+          <div className="text-center">
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 italic uppercase">Vanzeiro</h1>
+            <p className="text-slate-500 font-medium text-sm">
+              Gestão Profissional de Transporte Escolar
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -96,10 +102,10 @@ const Auth = () => {
           </div>
           <Button
             type="submit"
-            className="w-full touch-target text-base font-semibold"
+            className="w-full touch-target text-base font-black shadow-lg shadow-primary/20"
             disabled={loading}
           >
-            {loading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar conta'}
+            {loading ? 'Aguarde...' : isLogin ? 'ENTRAR NO PAINEL' : 'CRIAR MINHA CONTA'}
           </Button>
         </form>
 
