@@ -1,7 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Users, AlertTriangle, FileWarning, LogOut } from 'lucide-react';
+import { Users, AlertTriangle, FileWarning, LogOut, ShieldAlert } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/components/AppLayout';
@@ -14,7 +15,7 @@ const Dashboard = () => {
     queryFn: async () => {
       const [alunosRes, mensalidadesRes, docsRes] = await Promise.all([
         supabase.from('alunos').select('id', { count: 'exact' }).eq('status', 'ativo'),
-        supabase.from('mensalidades').select('id, aluno_id, mes_referencia', { count: 'exact' }).in('status', ['pendente', 'atrasado']),
+        supabase.from('mensalidades').select('valor').in('status', ['pendente', 'atrasado']),
         supabase.from('documentos').select('*'),
       ]);
 
@@ -26,33 +27,40 @@ const Dashboard = () => {
         return venc <= in30days;
       });
 
+      const totalReceber = (mensalidadesRes.data || []).reduce((acc, curr) => acc + Number(curr.valor), 0);
+
+      const hasExpiredDoc = (docsRes.data || []).some((d) => {
+        const venc = new Date(d.data_vencimento);
+        return venc < now;
+      });
+
       return {
         totalAlunos: alunosRes.count || 0,
-        inadimplentes: mensalidadesRes.count || 0,
+        totalReceber,
         docsVencendo: docsVencendo.length,
         docsUrgentes: docsVencendo.slice(0, 3),
-        inadimplentesList: mensalidadesRes.data || [],
+        hasExpiredDoc,
       };
     },
   });
 
   const cards = [
     {
-      label: 'Alunos ativos',
+      label: 'Alunos Ativos',
       value: stats?.totalAlunos ?? '-',
       icon: Users,
       color: 'text-primary',
-      bg: 'bg-accent',
+      bg: 'bg-primary/10',
     },
     {
-      label: 'Mensalidades em atraso',
-      value: stats?.inadimplentes ?? '-',
+      label: 'Total a Receber no Mês',
+      value: stats?.totalReceber ? `R$ ${stats.totalReceber.toFixed(2)}` : 'R$ 0,00',
       icon: AlertTriangle,
       color: 'text-destructive',
       bg: 'bg-destructive/10',
     },
     {
-      label: 'Docs vencendo (30 dias)',
+      label: 'Status Legal (Docs)',
       value: stats?.docsVencendo ?? '-',
       icon: FileWarning,
       color: 'text-warning',
@@ -71,6 +79,16 @@ const Dashboard = () => {
           <LogOut className="w-5 h-5" />
         </Button>
       </div>
+
+      {stats?.hasExpiredDoc && (
+        <Alert variant="destructive" className="mb-6 animate-pulse border-2 shadow-lg">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle className="font-extrabold tracking-tight">ATENÇÃO CRÍTICA</AlertTitle>
+          <AlertDescription className="font-medium">
+            Risco de apreensão de veículo. Documentos vencidos!
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 gap-3 mb-6">
         {cards.map((card) => (

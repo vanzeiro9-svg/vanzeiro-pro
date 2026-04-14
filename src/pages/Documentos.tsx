@@ -19,24 +19,12 @@ const CATEGORIES = {
   VEICULO: 'Veículo',
 } as const;
 
-const DOCUMENTOS_MOTORISTA = [
-  'CNH D ou E com T.E./CETE',
-  'Certidão Negativa Criminal',
-  'Exame Toxicológico',
-  'Curso CETE',
-  'Autorização para Transporte Escolar',
-];
-
-const DOCUMENTOS_VEICULO = [
+const DOCUMENTOS_OBRIGATORIOS = [
+  'CNH (EAR)',
   'Vistoria Semestral',
-  'Certificado do Tacógrafo (Inmetro)',
-  'CRLV anual',
-  'Alvará municipal',
-];
-
-const todasCategorias = [
-  ...DOCUMENTOS_MOTORISTA.map(tipo => ({ tipo, categoria: CATEGORIES.MOTORISTA })),
-  ...DOCUMENTOS_VEICULO.map(tipo => ({ tipo, categoria: CATEGORIES.VEICULO })),
+  'Alvará Municipal',
+  'Seguro APP',
+  'Inmetro (Tacógrafo)',
 ];
 
 const Documentos = () => {
@@ -113,16 +101,10 @@ const Documentos = () => {
     if (dias < 0) {
       return { label: 'Vencido', color: 'bg-destructive text-destructive-foreground', dot: '🔴', status: 'critical' };
     }
-    if (dias <= 7) {
-      return { label: `${dias} dias`, color: 'bg-destructive text-destructive-foreground', dot: '🔴', status: 'critical' };
+    if (dias <= 30) {
+      return { label: 'Atenção', color: 'bg-warning text-warning-foreground', dot: '🟡', status: 'attention' };
     }
-    if (dias <= 15) {
-      return { label: `${dias} dias`, color: 'bg-orange-500 text-white', dot: '🟠', status: 'warning' };
-    }
-    if (dias <= 60) {
-      return { label: `${dias} dias`, color: 'bg-warning text-warning-foreground', dot: '🟡', status: 'attention' };
-    }
-    return { label: 'Regular', color: 'bg-success text-success-foreground', dot: '🟢', status: 'ok' };
+    return { label: 'Em dia', color: 'bg-success text-success-foreground', dot: '🟢', status: 'ok' };
   };
 
   const getLatestByCategory = (tipo: string) => {
@@ -139,12 +121,12 @@ const Documentos = () => {
     <AppLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Documentos</h1>
-          <p className="text-sm text-muted-foreground">Gerencie suas autorizações e certificados</p>
+          <h1 className="text-2xl font-bold text-foreground">Documentação e Detran</h1>
+          <p className="text-sm text-muted-foreground">Evite multas e apreensões</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="touch-target gap-2 bg-primary hover:bg-primary/90 shadow-lg"><Plus className="w-4 h-4" /> Novo Upload</Button>
+            <Button className="touch-target gap-2 bg-primary hover:bg-primary/90 shadow-lg font-bold"><Plus className="w-4 h-4" /> Enviar Foto</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -159,10 +141,7 @@ const Documentos = () => {
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Motorista</div>
-                    {DOCUMENTOS_MOTORISTA.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    <div className="px-2 py-1 mt-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Veículo</div>
-                    {DOCUMENTOS_VEICULO.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    {DOCUMENTOS_OBRIGATORIOS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -193,89 +172,79 @@ const Documentos = () => {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="motorista" className="space-y-6">
-        <TabsList className="bg-muted/50 p-1 rounded-xl">
-          <TabsTrigger value="motorista" className="rounded-lg px-8">Motorista</TabsTrigger>
-          <TabsTrigger value="veiculo" className="rounded-lg px-8">Veículo</TabsTrigger>
-        </TabsList>
+      <div className="space-y-4 pt-2">
+        {DOCUMENTOS_OBRIGATORIOS.map((tipo) => {
+          const latest = getLatestByCategory(tipo);
+          const info = latest ? getStatusInfo(latest.data_vencimento) : { label: 'Pendente', color: 'bg-muted text-muted-foreground', dot: '⚪', status: 'pending' };
+          const history = getAllVersions(tipo);
 
-        {['motorista', 'veiculo'].map((cat) => (
-          <TabsContent key={cat} value={cat} className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-            {(cat === 'motorista' ? DOCUMENTOS_MOTORISTA : DOCUMENTOS_VEICULO).map((tipo) => {
-              const latest = getLatestByCategory(tipo);
-              const info = latest ? getStatusInfo(latest.data_vencimento) : { label: 'Pendente', color: 'bg-muted text-muted-foreground', dot: '⚪', status: 'pending' };
-              const history = getAllVersions(tipo);
-
-              return (
-                <Card key={tipo} className="p-4 flex items-center justify-between border-none shadow-sm bg-card hover:shadow-md transition-shadow">
-                  <div className="flex-1 min-w-0 pr-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-foreground text-sm truncate">{tipo}</h3>
-                      {latest && (
-                        <Badge variant="ghost" className="h-5 text-[10px] bg-secondary/50">Ativo</Badge>
+          return (
+            <Card key={tipo} className="p-4 flex items-center justify-between border-none shadow-sm bg-card hover:shadow-md transition-shadow">
+              <div className="flex-1 min-w-0 pr-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-bold text-foreground text-sm truncate">{tipo}</h3>
+                  {latest && (
+                    <Badge variant="ghost" className="h-5 text-[10px] bg-secondary/50">Ativo</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+                  {latest ? (
+                    <>
+                      <p className="flex items-center gap-1"><FileText className="w-3 h-3" /> Vence em: {new Date(latest.data_vencimento).toLocaleDateString('pt-BR')}</p>
+                      {latest.arquivo_url && (
+                          <a href={latest.arquivo_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" /> Ver
+                          </a>
                       )}
-                    </div>
-                    <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-                      {latest ? (
-                        <>
-                          <p className="flex items-center gap-1"><FileText className="w-3 h-3" /> Vence em: {new Date(latest.data_vencimento).toLocaleDateString('pt-BR')}</p>
-                          {latest.arquivo_url && (
-                             <a href={latest.arquivo_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                               <ExternalLink className="w-3 h-3" /> Ver
-                             </a>
-                          )}
-                        </>
-                      ) : (
-                        <p className="text-destructive font-medium italic">Nenhum documento enviado</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full ${info.color} flex items-center gap-1.5`}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse ring-2 ring-current ring-offset-1 opacity-80" />
-                      {info.label.toUpperCase()}
-                    </span>
-                    
-                    {history.length > 0 && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-muted text-muted-foreground hover:text-foreground">
-                            <History className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Histórico: {tipo}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-3 pt-4">
-                            {history.map((h: any, i: number) => (
-                              <div key={h.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                                <div>
-                                  <p className="text-xs font-bold">{new Date(h.data_vencimento).toLocaleDateString('pt-BR')}</p>
-                                  <p className="text-[10px] text-muted-foreground">Enviado em: {new Date(h.created_at).toLocaleDateString('pt-BR')}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {i === 0 && <Badge className="text-[9px]">Atual</Badge>}
-                                  {h.arquivo_url && (
-                                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                                      <a href={h.arquivo_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                    </>
+                  ) : (
+                    <p className="text-destructive font-medium italic">Nenhum documento enviado</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full ${info.color} flex items-center gap-1.5`}>
+                  {info.label.toUpperCase()}
+                </span>
+                
+                {history.length > 0 && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-muted text-muted-foreground hover:text-foreground">
+                        <History className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Histórico: {tipo}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3 pt-4">
+                        {history.map((h: any, i: number) => (
+                          <div key={h.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                            <div>
+                              <p className="text-xs font-bold">{new Date(h.data_vencimento).toLocaleDateString('pt-BR')}</p>
+                              <p className="text-[10px] text-muted-foreground">Enviado em: {new Date(h.created_at).toLocaleDateString('pt-BR')}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {i === 0 && <Badge className="text-[9px]">Atual</Badge>}
+                              {h.arquivo_url && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                  <a href={h.arquivo_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </TabsContent>
-        ))}
-      </Tabs>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
     </AppLayout>
   );
 };

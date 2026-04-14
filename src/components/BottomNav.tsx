@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Wallet, FileText, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, FileText, ClipboardCheck, Settings } from 'lucide-react';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Início' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Início' },
   { to: '/alunos', icon: Users, label: 'Alunos' },
-  { to: '/mensalidades', icon: Wallet, label: 'Pagar' },
-  { to: '/documentos', icon: FileText, label: 'Docs' },
-  { to: '/frequencia', icon: ClipboardCheck, label: 'Chamada' },
+  { to: '/mensalidades', icon: Wallet, label: 'Financeiro' },
+  { to: '/documentos', icon: FileText, label: 'Detran' },
+  { to: '/configuracoes', icon: Settings, label: 'Ajustes' },
 ];
 
 const BottomNav = () => {

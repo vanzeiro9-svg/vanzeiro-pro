@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { FileText, Download, MessageCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { exportFrequenciaMensalPDF } from '@/utils/pdfExport';
+import { getWhatsAppLink, templates } from '@/utils/whatsappTemplates';
 
 const Frequencia = () => {
   const { user } = useAuth();
@@ -14,6 +18,9 @@ const Frequencia = () => {
   const queryClient = useQueryClient();
   const hoje = new Date().toISOString().slice(0, 10);
   const [rotaId, setRotaId] = useState<string>('todas');
+  const [monthToExport, setMonthToExport] = useState(new Date().toISOString().slice(0, 7));
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const { data: rotas = [] } = useQuery({
     queryKey: ['rotas'],
@@ -73,11 +80,92 @@ const Frequencia = () => {
     return freq ? (freq as any).status : null;
   };
 
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user!.id).single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const { data: allAlunos, error: alunosError } = await supabase
+        .from('alunos')
+        .select('*')
+        .eq('status', 'ativo')
+        .order('nome');
+      
+      if (alunosError) throw alunosError;
+
+      const startDate = `${monthToExport}-01`;
+      const endDate = `${monthToExport}-31`;
+
+      const { data: monthFreqs, error: freqsError } = await supabase
+        .from('frequencias')
+        .select('*')
+        .gte('data', startDate)
+        .lte('data', endDate);
+
+      if (freqsError) throw freqsError;
+
+      exportFrequenciaMensalPDF(monthToExport, allAlunos || [], monthFreqs || [], profile);
+      toast({ title: 'PDF gerado com sucesso!' });
+      setExportOpen(false);
+    } catch (error: any) {
+      toast({ title: 'Erro ao gerar PDF', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleNotifyZap = (aluno: any, status: string) => {
+    const msg = status === 'presente' 
+      ? templates.embarque(aluno.nome, profile?.nome || 'Motorista')
+      : templates.falta(aluno.nome, profile?.nome || 'Motorista');
+    
+    const link = getWhatsAppLink(aluno.responsavel_whatsapp, msg);
+    window.open(link, '_blank');
+  };
+
   return (
     <AppLayout>
-      <div className="mb-4">
-        <h1 className="text-xl font-bold text-foreground">Chamada</h1>
-        <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Chamada</h1>
+          <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        </div>
+        
+        <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2 border-primary text-primary hover:bg-primary/10">
+              <Download className="w-4 h-4" /> Relatório
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Exportar Relatório Mensal</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground italic">Selecione o mês para gerar o relatório de frequência em PDF.</p>
+                <input 
+                  type="month" 
+                  value={monthToExport}
+                  onChange={(e) => setMonthToExport(e.target.value)}
+                  className="w-full p-2 border rounded-md"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleExportPDF} disabled={isExporting} className="w-full font-bold">
+                {isExporting ? 'Processando...' : 'Baixar PDF'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {rotas.length > 0 && (
@@ -125,6 +213,17 @@ const Frequencia = () => {
                       ❌ Não veio
                     </Button>
                   </div>
+                  
+                  {status && (profile as any)?.avisos_whatsapp !== false && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleNotifyZap(aluno, status)}
+                      className="touch-target text-green-600 hover:text-green-700 hover:bg-green-50 animate-in zoom-in"
+                    >
+                      <MessageCircle className="w-5 h-5 fill-current" />
+                    </Button>
+                  )}
                 </div>
               </Card>
             );
