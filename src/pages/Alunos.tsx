@@ -26,7 +26,7 @@ const Alunos = () => {
   const [form, setForm] = useState({
     nome: '', responsavel_nome: '', responsavel_whatsapp: '',
     endereco_embarque: '', endereco_desembarque: '', escola: '',
-    turno: 'manha', valor_mensalidade: '', status: 'ativo', rota_id: '',
+    turno: '', valor_mensalidade: '', status: 'ativo', rota_id: '',
   });
 
   const { data: alunos = [], isLoading } = useQuery({
@@ -42,6 +42,24 @@ const Alunos = () => {
     queryKey: ['rotas'],
     queryFn: async () => {
       const { data, error } = await supabase.from('rotas').select('*').order('nome');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: escolas = [] } = useQuery({
+    queryKey: ['escolas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('escolas').select('*').order('nome');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: turnos = [] } = useQuery({
+    queryKey: ['turnos'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('turnos').select('*').order('nome');
       if (error) throw error;
       return data;
     },
@@ -68,7 +86,7 @@ const Alunos = () => {
       queryClient.invalidateQueries({ queryKey: ['alunos'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       setOpen(false);
-      setForm({ nome: '', responsavel_nome: '', responsavel_whatsapp: '', endereco_embarque: '', endereco_desembarque: '', escola: '', turno: 'manha', valor_mensalidade: '', status: 'ativo', rota_id: '' });
+      setForm({ nome: '', responsavel_nome: '', responsavel_whatsapp: '', endereco_embarque: '', endereco_desembarque: '', escola: '', turno: '', valor_mensalidade: '', status: 'ativo', rota_id: '' });
       toast({ title: 'Aluno cadastrado!' });
     },
     onError: (error: any) => {
@@ -155,14 +173,19 @@ const Alunos = () => {
               <div><Label>WhatsApp do responsável</Label><Input value={form.responsavel_whatsapp} onChange={e => setForm({...form, responsavel_whatsapp: e.target.value})} placeholder="(11) 99999-9999" required className="touch-target" /></div>
               <div><Label>Endereço de embarque</Label><Input value={form.endereco_embarque} onChange={e => setForm({...form, endereco_embarque: e.target.value})} className="touch-target" /></div>
               <div><Label>Endereço de desembarque</Label><Input value={form.endereco_desembarque} onChange={e => setForm({...form, endereco_desembarque: e.target.value})} className="touch-target" /></div>
-              <div><Label>Escola</Label><Input value={form.escola} onChange={e => setForm({...form, escola: e.target.value})} className="touch-target" /></div>
+              <div><Label>Escola</Label>
+                <Select value={form.escola} onValueChange={v => setForm({...form, escola: v})}>
+                  <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione a escola" /></SelectTrigger>
+                  <SelectContent>
+                    {escolas.map((e: any) => <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Turno</Label>
                 <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
-                  <SelectTrigger className="touch-target"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manha">Manhã</SelectItem>
-                    <SelectItem value="tarde">Tarde</SelectItem>
-                    <SelectItem value="integral">Integral</SelectItem>
+                    {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -246,15 +269,20 @@ const Alunos = () => {
             <div><Label>WhatsApp do responsável</Label><Input value={form.responsavel_whatsapp} onChange={e => setForm({...form, responsavel_whatsapp: e.target.value})} placeholder="(11) 99999-9999" required className="touch-target" /></div>
             <div><Label>Endereço de embarque</Label><Input value={form.endereco_embarque} onChange={e => setForm({...form, endereco_embarque: e.target.value})} className="touch-target" /></div>
             <div><Label>Endereço de desembarque</Label><Input value={form.endereco_desembarque} onChange={e => setForm({...form, endereco_desembarque: e.target.value})} className="touch-target" /></div>
-            <div><Label>Escola</Label><Input value={form.escola} onChange={e => setForm({...form, escola: e.target.value})} className="touch-target" /></div>
+            <div><Label>Escola</Label>
+              <Select value={form.escola} onValueChange={v => setForm({...form, escola: v})}>
+                <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione a escola" /></SelectTrigger>
+                <SelectContent>
+                  {escolas.map((e: any) => <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Turno</Label>
                 <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
-                  <SelectTrigger className="touch-target"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manha">Manhã</SelectItem>
-                    <SelectItem value="tarde">Tarde</SelectItem>
-                    <SelectItem value="integral">Integral</SelectItem>
+                    {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
