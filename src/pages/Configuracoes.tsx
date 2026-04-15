@@ -13,12 +13,13 @@ import { Switch } from '@/components/ui/switch';
 
 type CrudItem = { id: string; nome: string; user_id: string };
 
-const CrudSection = ({ title, icon: Icon, table, userId }: { title: string; icon: React.ElementType; table: 'escolas' | 'turnos' | 'rotas'; userId: string }) => {
+const CrudSection = ({ title, icon: Icon, table, userId, defaultItems }: { title: string; icon: React.ElementType; table: 'escolas' | 'turnos' | 'rotas'; userId: string; defaultItems?: string[] }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [seeded, setSeeded] = useState(false);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: [table],
@@ -31,6 +32,21 @@ const CrudSection = ({ title, icon: Icon, table, userId }: { title: string; icon
       }
       const { data, error } = await query;
       if (error) throw error;
+
+      // Auto-seed defaults on first load if empty
+      if (data.length === 0 && defaultItems && defaultItems.length > 0 && !seeded) {
+        const rows = defaultItems.map(nome => {
+          const row: any = { nome, user_id: userId };
+          if (table === 'rotas') row.turno = 'Manhã';
+          return row;
+        });
+        await supabase.from(table).insert(rows);
+        setSeeded(true);
+        const { data: refreshed, error: err2 } = await supabase.from(table).select('id, nome, user_id').eq('user_id', userId).order('nome');
+        if (err2) throw err2;
+        return refreshed as CrudItem[];
+      }
+
       return data as CrudItem[];
     },
   });
