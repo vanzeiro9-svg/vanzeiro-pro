@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Phone, Trash2, Edit } from 'lucide-react';
+import { Plus, Phone, Trash2, Edit, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -21,6 +21,7 @@ const Alunos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [busca, setBusca] = useState('');
   const [editOpen, setEditOpen] = useState(false);
   const [selectedAluno, setSelectedAluno] = useState<any>(null);
   const [form, setForm] = useState({
@@ -135,9 +136,13 @@ const Alunos = () => {
     setEditOpen(true);
   };
 
+  const alunosFiltrados = alunos.filter((a: any) =>
+    a.nome.toLowerCase().includes(busca.toLowerCase())
+  );
+
   return (
     <AppLayout>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h1 className="text-xl font-bold text-foreground">Alunos</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -185,6 +190,26 @@ const Alunos = () => {
         </Dialog>
       </div>
 
+      {/* Campo de Pesquisa */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Pesquisar aluno por nome..."
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          className="w-full h-11 pl-9 pr-9 rounded-xl border border-border bg-muted/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+        />
+        {busca && (
+          <button
+            onClick={() => setBusca('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
       {isLoading ? (
         <p className="text-muted-foreground text-center py-8">Carregando...</p>
       ) : alunos.length === 0 ? (
@@ -192,9 +217,14 @@ const Alunos = () => {
           <p className="text-muted-foreground">Nenhum aluno cadastrado ainda.</p>
           <p className="text-sm text-muted-foreground mt-1">Clique em "Novo" para começar!</p>
         </Card>
+      ) : alunosFiltrados.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">Nenhum aluno encontrado para "{busca}".</p>
+          <button onClick={() => setBusca('')} className="text-sm text-primary font-semibold mt-2 hover:underline">Limpar pesquisa</button>
+        </Card>
       ) : (
         <div className="space-y-3">
-          {alunos.map((aluno: any) => (
+          {alunosFiltrados.map((aluno: any) => (
             <div 
               key={aluno.id} 
               role="button"
