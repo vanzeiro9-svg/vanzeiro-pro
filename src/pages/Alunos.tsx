@@ -13,7 +13,6 @@ import { Plus, Phone, Trash2, Edit, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
-const turnoLabels: Record<string, string> = { manha: 'Manhã', tarde: 'Tarde', integral: 'Integral' };
 const statusLabels: Record<string, string> = { ativo: 'Ativo', pausado: 'Pausado', desistente: 'Desistente' };
 
 const Alunos = () => {
@@ -45,6 +44,24 @@ const Alunos = () => {
       const { data, error } = await supabase.from('rotas').select('*').order('nome');
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: escolas = [] } = useQuery({
+    queryKey: ['escolas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('escolas').select('*').order('nome');
+      if (error) throw error;
+      return data as { id: string; nome: string }[];
+    },
+  });
+
+  const { data: turnos = [] } = useQuery({
+    queryKey: ['turnos'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('turnos').select('*').order('nome');
+      if (error) throw error;
+      return data as { id: string; nome: string }[];
     },
   });
 
@@ -160,14 +177,21 @@ const Alunos = () => {
               <div><Label>WhatsApp do responsável</Label><Input value={form.responsavel_whatsapp} onChange={e => setForm({...form, responsavel_whatsapp: e.target.value})} placeholder="(11) 99999-9999" required className="touch-target" /></div>
               <div><Label>Endereço de embarque</Label><Input value={form.endereco_embarque} onChange={e => setForm({...form, endereco_embarque: e.target.value})} className="touch-target" /></div>
               <div><Label>Endereço de desembarque</Label><Input value={form.endereco_desembarque} onChange={e => setForm({...form, endereco_desembarque: e.target.value})} className="touch-target" /></div>
-              <div><Label>Escola</Label><Input value={form.escola} onChange={e => setForm({...form, escola: e.target.value})} className="touch-target" /></div>
+              <div><Label>Escola</Label>
+                <Select value={form.escola} onValueChange={v => setForm({...form, escola: v})}>
+                  <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione a escola" /></SelectTrigger>
+                  <SelectContent>
+                    {escolas.map((e: any) => <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>)}
+                    {escolas.length === 0 && <SelectItem value="" disabled>Cadastre escolas em Ajustes</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Turno</Label>
                 <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
-                  <SelectTrigger className="touch-target"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manha">Manhã</SelectItem>
-                    <SelectItem value="tarde">Tarde</SelectItem>
-                    <SelectItem value="integral">Integral</SelectItem>
+                    {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
+                    {turnos.length === 0 && <SelectItem value="" disabled>Cadastre turnos em Ajustes</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -236,7 +260,7 @@ const Alunos = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-bold text-foreground">{aluno.nome}</h3>
-                  <p className="text-sm text-muted-foreground">{aluno.escola} • {turnoLabels[aluno.turno]}</p>
+                  <p className="text-sm text-muted-foreground">{aluno.escola} • {aluno.turno}</p>
                   <p className="text-sm text-muted-foreground">{aluno.responsavel_nome}</p>
                   {aluno.rotas?.nome && <p className="text-xs text-primary font-semibold mt-1">🚐 {aluno.rotas.nome}</p>}
                 </div>
@@ -276,15 +300,22 @@ const Alunos = () => {
             <div><Label>WhatsApp do responsável</Label><Input value={form.responsavel_whatsapp} onChange={e => setForm({...form, responsavel_whatsapp: e.target.value})} placeholder="(11) 99999-9999" required className="touch-target" /></div>
             <div><Label>Endereço de embarque</Label><Input value={form.endereco_embarque} onChange={e => setForm({...form, endereco_embarque: e.target.value})} className="touch-target" /></div>
             <div><Label>Endereço de desembarque</Label><Input value={form.endereco_desembarque} onChange={e => setForm({...form, endereco_desembarque: e.target.value})} className="touch-target" /></div>
-            <div><Label>Escola</Label><Input value={form.escola} onChange={e => setForm({...form, escola: e.target.value})} className="touch-target" /></div>
+            <div><Label>Escola</Label>
+              <Select value={form.escola} onValueChange={v => setForm({...form, escola: v})}>
+                <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione a escola" /></SelectTrigger>
+                <SelectContent>
+                  {escolas.map((e: any) => <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>)}
+                  {escolas.length === 0 && <SelectItem value="" disabled>Cadastre escolas em Ajustes</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Turno</Label>
                 <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
-                  <SelectTrigger className="touch-target"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manha">Manhã</SelectItem>
-                    <SelectItem value="tarde">Tarde</SelectItem>
-                    <SelectItem value="integral">Integral</SelectItem>
+                    {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
+                    {turnos.length === 0 && <SelectItem value="" disabled>Cadastre turnos em Ajustes</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
