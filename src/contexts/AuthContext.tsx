@@ -23,28 +23,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const loadData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const { data } = await supabase.from('profiles').select('*').eq('user_id', session.user.id).single();
-        setProfile(data);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        
+        if (currentUser) {
+          const { data } = await supabase.from('profiles').select('*').eq('user_id', currentUser.id).single();
+          if (data) setProfile(data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados iniciais:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     loadData();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
       const currentUser = session?.user ?? null;
+      setSession(session);
       setUser(currentUser);
+      
       if (currentUser) {
-        const { data } = await supabase.from('profiles').select('*').eq('user_id', currentUser.id).single();
-        setProfile(data);
+        // Buscamos o perfil, mas não bloqueamos o loading se ele demorar
+        supabase.from('profiles')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .single()
+          .then(({ data }) => {
+            if (data) setProfile(data);
+          });
       } else {
         setProfile(null);
       }
+      
       setLoading(false);
     });
 
