@@ -21,7 +21,7 @@ const Landing = () => {
     if (user) {
       navigate('/dashboard');
     } else {
-      navigate('/login');
+      navigate('/auth/login');
     }
   };
 
@@ -58,7 +58,7 @@ const Landing = () => {
             <span className="text-xl font-black tracking-tight text-slate-900 uppercase italic">Vanzeiro</span>
           </div>
           <Button variant="ghost" className="font-bold text-slate-600 hover:text-primary" asChild>
-            <Link to={user ? "/dashboard" : "/login"}>
+            <Link to={user ? "/dashboard" : "/auth/login"}>
               {user ? "Ir para o Painel" : "Entrar"}
             </Link>
           </Button>
@@ -216,7 +216,7 @@ const Landing = () => {
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
           <div className="relative rounded-3xl overflow-hidden shadow-xl min-h-[260px] lg:min-h-[320px]">
             <img
-              src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80"
+              src="/van-parceria.png"
               alt="Motorista de van escolar em frente ao veículo"
               className="w-full h-full object-cover"
               loading="lazy"
@@ -240,6 +240,16 @@ const Landing = () => {
               <p className="text-slate-600 text-lg">
                 Comprou sua van na Zero Utilitários? Solicite seu cupom e profissionalize sua gestão sem custo por meio ano.
               </p>
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+                <a
+                  href="https://zeeroutilitarios.com.br"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex text-slate-900 text-lg font-black hover:underline"
+                >
+                  Ver ofertas na Zero Utilitários
+                </a>
+              </div>
             </div>
           </Card>
         </div>

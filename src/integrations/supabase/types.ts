@@ -188,21 +188,36 @@ export type Database = {
           email: string | null
           id: string
           nome: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_active: boolean
+          subscription_status: string
           user_id: string
+          whatsapp: string | null
         }
         Insert: {
           created_at?: string
           email?: string | null
           id?: string
           nome?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_active?: boolean
+          subscription_status?: string
           user_id: string
+          whatsapp?: string | null
         }
         Update: {
           created_at?: string
           email?: string | null
           id?: string
           nome?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_active?: boolean
+          subscription_status?: string
           user_id?: string
+          whatsapp?: string | null
         }
         Relationships: []
       }

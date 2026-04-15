@@ -1,21 +1,38 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Users, AlertTriangle, FileWarning, LogOut, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CreditCard, FileWarning, LogOut, ShieldAlert, TrendingUp, Users, Wallet } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/components/AppLayout';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const mesCorrente = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const inicioMesCorrente = `${mesCorrente}-01`;
+  const inicioProximoMesCorrente = (() => {
+    const [ano, mes] = mesCorrente.split('-').map(Number);
+    const proximo = new Date(ano, mes, 1);
+    return `${proximo.getFullYear()}-${String(proximo.getMonth() + 1).padStart(2, '0')}-01`;
+  })();
+  const periodoLabel = new Date(`${mesCorrente}-02`).toLocaleDateString('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  });
 
   const { data: stats } = useQuery({
-    queryKey: ['dashboard-stats'],
+    queryKey: ['dashboard-stats', mesCorrente],
     queryFn: async () => {
-      const [alunosRes, mensalidadesRes, docsRes] = await Promise.all([
-        supabase.from('alunos').select('id', { count: 'exact' }).eq('status', 'ativo'),
-        supabase.from('mensalidades').select('valor').in('status', ['pendente', 'atrasado']),
+      const [alunosRes, mensalidadesRes, despesasRes, docsRes] = await Promise.all([
+        supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
+        supabase.from('mensalidades').select('valor, status').eq('mes_referencia', mesCorrente),
+        supabase
+          .from('despesas')
+          .select('valor')
+          .gte('data_despesa', inicioMesCorrente)
+          .lt('data_despesa', inicioProximoMesCorrente),
         supabase.from('documentos').select('*'),
       ]);
 
@@ -27,7 +44,16 @@ const Dashboard = () => {
         return venc <= in30days;
       });
 
-      const totalReceber = (mensalidadesRes.data || []).reduce((acc, curr) => acc + Number(curr.valor), 0);
+      const receitaBruta = (mensalidadesRes.data || [])
+        .filter((m) => m.status === 'pago')
+        .reduce((acc, curr) => acc + Number(curr.valor), 0);
+
+      const inadimplencia = (mensalidadesRes.data || [])
+        .filter((m) => m.status === 'atrasado')
+        .reduce((acc, curr) => acc + Number(curr.valor), 0);
+
+      const despesasTotais = (despesasRes.data || []).reduce((acc, curr) => acc + Number(curr.valor), 0);
+      const lucroLiquido = receitaBruta - despesasTotais;
 
       const hasExpiredDoc = (docsRes.data || []).some((d) => {
         const venc = new Date(d.data_vencimento);
@@ -35,8 +61,16 @@ const Dashboard = () => {
       });
 
       return {
+        periodo: periodoLabel,
         totalAlunos: alunosRes.count || 0,
-        totalReceber,
+        receitaBruta,
+        despesasTotais,
+        lucroLiquido,
+        inadimplencia,
+        chartData: [
+          { nome: 'Receitas', valor: receitaBruta },
+          { nome: 'Despesas', valor: despesasTotais },
+        ],
         docsVencendo: docsVencendo.length,
         docsUrgentes: docsVencendo.slice(0, 3),
         hasExpiredDoc,
@@ -44,27 +78,51 @@ const Dashboard = () => {
     },
   });
 
+  const formatCurrency = (value: number) =>
+    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
   const cards = [
     {
       label: 'Alunos Ativos',
-      value: stats?.totalAlunos ?? '-',
+      value: stats?.totalAlunos ?? 0,
       icon: Users,
       color: 'text-primary',
       bg: 'bg-primary/10',
     },
     {
-      label: 'Total a Receber no Mês',
-      value: stats?.totalReceber ? `R$ ${stats.totalReceber.toFixed(2)}` : 'R$ 0,00',
-      icon: AlertTriangle,
-      color: 'text-destructive',
-      bg: 'bg-destructive/10',
-    },
-    {
-      label: 'Status Legal (Docs)',
-      value: stats?.docsVencendo ?? '-',
+      label: 'Documentos a vencer',
+      value: stats?.docsVencendo ?? 0,
       icon: FileWarning,
       color: 'text-warning',
       bg: 'bg-warning/10',
+    },
+    {
+      label: 'Receita Bruta',
+      value: formatCurrency(stats?.receitaBruta ?? 0),
+      icon: Wallet,
+      color: 'text-emerald-700',
+      bg: 'bg-emerald-100',
+    },
+    {
+      label: 'Despesas Totais',
+      value: formatCurrency(stats?.despesasTotais ?? 0),
+      icon: CreditCard,
+      color: 'text-rose-700',
+      bg: 'bg-rose-100',
+    },
+    {
+      label: 'Lucro Líquido',
+      value: formatCurrency(stats?.lucroLiquido ?? 0),
+      icon: TrendingUp,
+      color: (stats?.lucroLiquido ?? 0) >= 0 ? 'text-blue-700' : 'text-amber-700',
+      bg: (stats?.lucroLiquido ?? 0) >= 0 ? 'bg-blue-100' : 'bg-amber-100',
+    },
+    {
+      label: 'Inadimplência (vencidas)',
+      value: formatCurrency(stats?.inadimplencia ?? 0),
+      icon: AlertTriangle,
+      color: 'text-destructive',
+      bg: 'bg-destructive/10',
     },
   ];
 
@@ -74,6 +132,9 @@ const Dashboard = () => {
         <div>
           <h1 className="text-xl font-bold text-foreground">Olá! 👋</h1>
           <p className="text-sm text-muted-foreground">{user?.email}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Período financeiro: <span className="font-semibold capitalize">{stats?.periodo ?? periodoLabel}</span>
+          </p>
         </div>
         <Button variant="ghost" size="icon" onClick={signOut} className="touch-target">
           <LogOut className="w-5 h-5" />
@@ -103,6 +164,21 @@ const Dashboard = () => {
           </Card>
         ))}
       </div>
+
+      <Card className="p-4 mb-6">
+        <h2 className="text-base font-bold text-foreground mb-4">Receitas vs Despesas</h2>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={stats?.chartData ?? []}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="nome" />
+              <YAxis tickFormatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR')}`} />
+              <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
+              <Bar dataKey="valor" radius={[8, 8, 0, 0]} fill="hsl(var(--primary))" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
 
       {stats?.docsUrgentes && stats.docsUrgentes.length > 0 && (
         <div className="mb-6">

@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, nome: string) => Promise<void>;
+  signUp: (email: string, password: string, nome: string, whatsapp: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   profile: any;
@@ -21,6 +21,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+    setProfile(data);
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -30,8 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(currentUser);
         
         if (currentUser) {
-          const { data } = await supabase.from('profiles').select('*').eq('user_id', currentUser.id).single();
-          if (data) setProfile(data);
+          await fetchProfile(currentUser.id);
         }
       } catch (error) {
         console.error('Erro ao carregar dados iniciais:', error);
@@ -49,18 +59,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       clearTimeout(timeout);
+      setLoading(true);
       const currentUser = session?.user ?? null;
       setSession(session);
       setUser(currentUser);
       
       if (currentUser) {
-        supabase.from('profiles')
-          .select('*')
-          .eq('user_id', currentUser.id)
-          .single()
-          .then(({ data }) => {
-            if (data) setProfile(data);
-          });
+        try {
+          await fetchProfile(currentUser.id);
+        } catch (error) {
+          console.error('Erro ao buscar perfil:', error);
+          setProfile(null);
+        }
       } else {
         setProfile(null);
       }
@@ -74,11 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, nome: string) => {
+  const signUp = async (email: string, password: string, nome: string, whatsapp: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { nome } },
+      options: { data: { nome, whatsapp } },
     });
     if (error) throw error;
   };
@@ -95,8 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
-      const { data } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
-      setProfile(data);
+      await fetchProfile(user.id);
     }
   };
 

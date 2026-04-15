@@ -5,7 +5,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, MessageSquare, History } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Check, MessageSquare, History, Search, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,6 +18,19 @@ const Mensalidades = () => {
   const queryClient = useQueryClient();
 
   const [mesFiltro, setMesFiltro] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [despesaForm, setDespesaForm] = useState({
+    categoria: 'Combustivel',
+    valor: '',
+    data_despesa: new Date().toISOString().slice(0, 10),
+  });
+  const [mostrarControlePagamentos, setMostrarControlePagamentos] = useState(false);
+  const [buscaNome, setBuscaNome] = useState('');
+  const inicioMesFiltro = `${mesFiltro}-01`;
+  const inicioProximoMes = (() => {
+    const [ano, mes] = mesFiltro.split('-').map(Number);
+    const proximo = new Date(ano, mes, 1);
+    return `${proximo.getFullYear()}-${String(proximo.getMonth() + 1).padStart(2, '0')}-01`;
+  })();
 
   const { data: mensalidades = [], isLoading } = useQuery({
     queryKey: ['mensalidades', mesFiltro],
@@ -91,6 +107,63 @@ const Mensalidades = () => {
     },
   });
 
+  const { data: despesas = [] } = useQuery({
+    queryKey: ['despesas', mesFiltro],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('despesas')
+        .select('id, categoria, valor, data_despesa')
+        .gte('data_despesa', inicioMesFiltro)
+        .lt('data_despesa', inicioProximoMes)
+        .order('data_despesa', { ascending: false });
+
+      if (error) {
+        if (error.message?.includes("Could not find the table 'public.despesas'")) {
+          return [];
+        }
+        throw error;
+      }
+      return data || [];
+    },
+  });
+
+  const addDespesaMutation = useMutation({
+    mutationFn: async () => {
+      const valor = Number(despesaForm.valor);
+
+      if (!despesaForm.categoria || !despesaForm.data_despesa || Number.isNaN(valor) || valor <= 0) {
+        throw new Error('Preencha categoria, valor e data corretamente.');
+      }
+
+      const { error } = await supabase.from('despesas').insert({
+        categoria: despesaForm.categoria,
+        valor,
+        data_despesa: despesaForm.data_despesa,
+        fixa: false,
+      });
+
+      if (error) {
+        if (error.message?.includes("Could not find the table 'public.despesas'")) {
+          throw new Error('A tabela de despesas ainda não foi criada no banco. Execute as migrações do Supabase e tente novamente.');
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['despesas'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      setDespesaForm({
+        categoria: 'Combustivel',
+        valor: '',
+        data_despesa: new Date().toISOString().slice(0, 10),
+      });
+      toast({ title: 'Despesa registrada com sucesso!' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Erro ao registrar despesa', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const handleCobrarZap = (m: any) => {
     const nomeResponsavel = m.alunos?.responsavel_nome || 'Responsável';
     const nomeMotorista = profile?.nome || 'Seu Motorista';
@@ -105,6 +178,10 @@ const Mensalidades = () => {
   };
 
   const mesLabel = new Date(mesFiltro + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const totalDespesasMes = despesas.reduce((acc: number, item: any) => acc + Number(item.valor), 0);
+  const mensalidadesFiltradas = mensalidades.filter((m: any) =>
+    (m.alunos?.nome || '').toLowerCase().includes(buscaNome.toLowerCase())
+  );
 
   return (
     <AppLayout>
@@ -128,54 +205,176 @@ const Mensalidades = () => {
         </Button>
       </div>
 
-      {isLoading ? (
-        <p className="text-muted-foreground text-center py-8">Carregando...</p>
-      ) : mensalidades.length === 0 ? (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground">Nenhuma cobrança neste mês.</p>
-          <p className="text-sm text-muted-foreground mt-1">Clique em "Gerar cobranças" para criar.</p>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {mensalidades.map((m: any) => (
-            <Card key={m.id} className="p-4 flex items-center justify-between animate-fade-in">
-              <div>
-                <h3 className="font-bold text-foreground text-sm">{m.alunos?.nome}</h3>
-                <p className="text-sm font-semibold text-foreground">R$ {Number(m.valor).toFixed(2)}</p>
-                <span className={`text-xs font-bold ${
-                  m.status === 'pago' ? 'text-success' :
-                  m.status === 'atrasado' ? 'text-destructive' :
-                  'text-warning'
-                }`}>
-                  {m.status === 'pago' ? '✅ Pago' : m.status === 'atrasado' ? '❌ Atrasado' : '⏳ Pendente'}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                {m.status !== 'pago' && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCobrarZap(m)}
-                      className="touch-target gap-1 border-primary text-primary hover:bg-primary/10"
-                    >
-                      <MessageSquare className="w-4 h-4" /> Zap
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => pagarMutation.mutate(m.id)}
-                      disabled={pagarMutation.isPending}
-                      className="touch-target gap-1"
-                    >
-                      <Check className="w-4 h-4" /> Pago
-                    </Button>
-                  </>
-                )}
-              </div>
-            </Card>
-          ))}
+      <Card className="p-4 mt-2 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-foreground">Registro de Despesas</h2>
+          <span className="text-xs font-semibold text-muted-foreground capitalize">Período: {mesLabel}</span>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="space-y-1.5">
+            <Label>Categoria</Label>
+            <Select
+              value={despesaForm.categoria}
+              onValueChange={(value) => setDespesaForm((prev) => ({ ...prev, categoria: value }))}
+            >
+              <SelectTrigger className="touch-target">
+                <SelectValue placeholder="Selecione a categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Combustivel">Combustível</SelectItem>
+                <SelectItem value="Manutenção">Manutenção</SelectItem>
+                <SelectItem value="Outros">Outros</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Valor (R$)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={despesaForm.valor}
+              onChange={(e) => setDespesaForm((prev) => ({ ...prev, valor: e.target.value }))}
+              placeholder="0,00"
+              className="touch-target"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Data</Label>
+            <Input
+              type="date"
+              value={despesaForm.data_despesa}
+              onChange={(e) => setDespesaForm((prev) => ({ ...prev, data_despesa: e.target.value }))}
+              className="touch-target"
+            />
+          </div>
+        </div>
+
+        <Button
+          onClick={() => addDespesaMutation.mutate()}
+          disabled={addDespesaMutation.isPending}
+          className="w-full md:w-auto touch-target"
+        >
+          {addDespesaMutation.isPending ? 'Salvando despesa...' : 'Salvar despesa'}
+        </Button>
+
+        <div className="border-t pt-3">
+          <p className="text-sm font-semibold text-foreground">
+            Total de despesas no mês: R$ {totalDespesasMes.toFixed(2)}
+          </p>
+          {despesas.length === 0 ? (
+            <p className="text-xs text-muted-foreground mt-1">Nenhuma despesa registrada para este período.</p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {despesas.map((d: any) => (
+                <div key={d.id} className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{d.categoria}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(`${d.data_despesa}T00:00:00`).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-foreground">R$ {Number(d.valor).toFixed(2)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card className="p-4 mt-6 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-foreground">Controle de Pagamento dos Alunos</h2>
+          <Button
+            type="button"
+            variant={mostrarControlePagamentos ? 'outline' : 'default'}
+            onClick={() => setMostrarControlePagamentos((prev) => !prev)}
+            className="touch-target"
+          >
+            {mostrarControlePagamentos ? 'Ocultar lista' : 'Mostrar lista'}
+          </Button>
+        </div>
+
+        {mostrarControlePagamentos && (
+          <>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={buscaNome}
+                onChange={(e) => setBuscaNome(e.target.value)}
+                placeholder="Buscar aluno por nome..."
+                className="pl-9 pr-9"
+              />
+              {buscaNome && (
+                <button
+                  onClick={() => setBuscaNome('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  type="button"
+                  aria-label="Limpar busca"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {isLoading ? (
+              <p className="text-muted-foreground text-center py-6">Carregando...</p>
+            ) : mensalidades.length === 0 ? (
+              <Card className="p-6 text-center">
+                <p className="text-muted-foreground">Nenhuma cobrança neste mês.</p>
+                <p className="text-sm text-muted-foreground mt-1">Clique em "Gerar cobranças" para criar.</p>
+              </Card>
+            ) : mensalidadesFiltradas.length === 0 ? (
+              <Card className="p-6 text-center">
+                <p className="text-muted-foreground">Nenhum aluno encontrado para "{buscaNome}".</p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {mensalidadesFiltradas.map((m: any) => (
+                  <Card key={m.id} className="p-4 flex items-center justify-between animate-fade-in">
+                    <div>
+                      <h3 className="font-bold text-foreground text-sm">{m.alunos?.nome}</h3>
+                      <p className="text-sm font-semibold text-foreground">R$ {Number(m.valor).toFixed(2)}</p>
+                      <span className={`text-xs font-bold ${
+                        m.status === 'pago' ? 'text-success' :
+                        m.status === 'atrasado' ? 'text-destructive' :
+                        'text-warning'
+                      }`}>
+                        {m.status === 'pago' ? '✅ Pago' : m.status === 'atrasado' ? '❌ Atrasado' : '⏳ Pendente'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      {m.status !== 'pago' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCobrarZap(m)}
+                            className="touch-target gap-1 border-primary text-primary hover:bg-primary/10"
+                          >
+                            <MessageSquare className="w-4 h-4" /> Zap
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => pagarMutation.mutate(m.id)}
+                            disabled={pagarMutation.isPending}
+                            className="touch-target gap-1"
+                          >
+                            <Check className="w-4 h-4" /> Pago
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </Card>
     </AppLayout>
   );
 };

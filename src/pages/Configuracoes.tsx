@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { User, Truck, CreditCard, MessageCircle, School, MapPin, Clock, Plus, Trash2, Settings2 } from 'lucide-react';
+import { User, Truck, CreditCard, MessageCircle, School, MapPin, Clock, Plus, Trash2, Settings2, ShieldCheck, ArrowRight } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
 // Componente reutilizável para gerenciar listas de parâmetros
@@ -233,6 +233,28 @@ const Configuracoes = () => {
     onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
   });
 
+  const manageSubscriptionMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('create-customer-portal', {
+        body: {
+          returnUrl: `${window.location.origin}/configuracoes`,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.url) throw new Error('Não foi possível gerar o link do portal Stripe.');
+
+      window.location.assign(data.url);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao abrir portal',
+        description: error.message ?? 'Não foi possível abrir o portal da assinatura.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return (
     <AppLayout>
       <div className="mb-6">
@@ -376,6 +398,25 @@ const Configuracoes = () => {
                 isAdding={addTurnoMutation.isPending}
               />
             </div>
+          </Card>
+
+          <Card className="p-4 space-y-4">
+            <div className="flex items-center gap-2 text-primary font-bold">
+              <ShieldCheck className="w-5 h-5" />
+              <span>Minha Assinatura</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Gerencie cobrança com segurança no Stripe. Você pode cancelar, trocar cartão ou atualizar método de pagamento.
+            </p>
+            <Button
+              type="button"
+              className="w-full touch-target font-bold gap-2"
+              onClick={() => manageSubscriptionMutation.mutate()}
+              disabled={manageSubscriptionMutation.isPending}
+            >
+              {manageSubscriptionMutation.isPending ? 'Gerando link seguro...' : 'Gerenciar Assinatura'}
+              <ArrowRight className="w-4 h-4" />
+            </Button>
           </Card>
         </div>
       )}
