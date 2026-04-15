@@ -8,8 +8,143 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { User, Truck, CreditCard, MessageCircle } from 'lucide-react';
+import { User, Truck, CreditCard, MessageCircle, Settings2, GraduationCap, MapPin, Clock, Pencil, Trash2, Plus, X, Check } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+
+type CrudItem = { id: string; nome: string; user_id: string };
+
+const CrudSection = ({ title, icon: Icon, table, userId }: { title: string; icon: React.ElementType; table: 'escolas' | 'turnos' | 'rotas'; userId: string }) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: [table],
+    queryFn: async () => {
+      const query = supabase.from(table).select('id, nome, user_id').eq('user_id', userId).order('nome');
+      if (table === 'rotas') {
+        const { data, error } = await supabase.from('rotas').select('id, nome, user_id, turno').eq('user_id', userId).order('nome');
+        if (error) throw error;
+        return data as CrudItem[];
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as CrudItem[];
+    },
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async (nome: string) => {
+      const insertData: any = { nome, user_id: userId };
+      if (table === 'rotas') insertData.turno = 'Manhã';
+      const { error } = await supabase.from(table).insert(insertData);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [table] });
+      setNewName('');
+      toast({ title: `${title.slice(0, -1)} adicionado(a)!` });
+    },
+    onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, nome }: { id: string; nome: string }) => {
+      const { error } = await supabase.from(table).update({ nome }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [table] });
+      setEditingId(null);
+      toast({ title: 'Atualizado!' });
+    },
+    onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from(table).delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [table] });
+      toast({ title: 'Removido!' });
+    },
+    onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <Icon className="w-4 h-4 text-primary" />
+        <span>{title}</span>
+      </div>
+
+      {/* Add new */}
+      <div className="flex gap-2">
+        <Input
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          placeholder={`Nova ${title.slice(0, -1).toLowerCase()}...`}
+          className="touch-target text-sm"
+          onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) addMutation.mutate(newName.trim()); }}
+        />
+        <Button
+          type="button"
+          size="icon"
+          className="touch-target shrink-0"
+          disabled={!newName.trim() || addMutation.isPending}
+          onClick={() => addMutation.mutate(newName.trim())}
+        >
+          <Plus className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* List */}
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground">Carregando...</p>
+      ) : items.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">Nenhum(a) cadastrado(a)</p>
+      ) : (
+        <ul className="space-y-1">
+          {items.map(item => (
+            <li key={item.id} className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm">
+              {editingId === item.id ? (
+                <>
+                  <Input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="h-8 text-sm flex-1"
+                    autoFocus
+                    onKeyDown={e => { if (e.key === 'Enter' && editName.trim()) updateMutation.mutate({ id: item.id, nome: editName.trim() }); if (e.key === 'Escape') setEditingId(null); }}
+                  />
+                  <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => { if (editName.trim()) updateMutation.mutate({ id: item.id, nome: editName.trim() }); }}>
+                    <Check className="w-4 h-4 text-primary" />
+                  </Button>
+                  <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1">{item.nome}</span>
+                  <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingId(item.id); setEditName(item.nome); }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => deleteMutation.mutate(item.id)}>
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 const Configuracoes = () => {
   const { user } = useAuth();
@@ -109,7 +244,7 @@ const Configuracoes = () => {
               />
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between pt-2 border-t border-border">
               <div className="space-y-0.5">
                 <Label htmlFor="avisos" className="flex items-center gap-2">
                   <MessageCircle className="w-4 h-4" /> 
@@ -162,6 +297,21 @@ const Configuracoes = () => {
             {updateMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
           </Button>
         </form>
+      )}
+
+      {/* Parâmetros do Sistema */}
+      {user && (
+        <Card className="p-4 space-y-6 mt-6">
+          <div className="flex items-center gap-2 text-primary font-bold mb-2">
+            <Settings2 className="w-5 h-5" />
+            <span>Parâmetros do Sistema</span>
+          </div>
+          <CrudSection title="Escolas" icon={GraduationCap} table="escolas" userId={user.id} />
+          <hr className="border-border" />
+          <CrudSection title="Rotas" icon={MapPin} table="rotas" userId={user.id} />
+          <hr className="border-border" />
+          <CrudSection title="Turnos" icon={Clock} table="turnos" userId={user.id} />
+        </Card>
       )}
     </AppLayout>
   );

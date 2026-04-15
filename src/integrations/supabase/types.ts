@@ -106,6 +106,27 @@ export type Database = {
         }
         Relationships: []
       }
+      escolas: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       frequencias: {
         Row: {
           aluno_id: string
@@ -226,6 +247,27 @@ export type Database = {
           id?: string
           nome?: string
           turno?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      turnos: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
           user_id?: string
         }
         Relationships: []
