@@ -109,15 +109,13 @@ const Auth = () => {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
-          {isLogin ? 'Não tem conta?' : 'Já tem conta?'}{' '}
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-primary font-semibold underline-offset-2 hover:underline"
-          >
-            {isLogin ? 'Cadastre-se' : 'Faça login'}
-          </button>
         </p>
+        
+        <div className="pt-6 text-center border-t border-slate-100 mt-4">
+          <p className="text-[10px] text-slate-300 font-mono tracking-widest uppercase">
+            Build v1.8.2 • Premium Edition
+          </p>
+        </div>
       </div>
     </div>
   );
