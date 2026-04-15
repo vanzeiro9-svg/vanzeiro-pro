@@ -18,15 +18,32 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><p className="text-muted-foreground">Carregando...</p></div>;
-  if (!user) return <Navigate to="/login" replace />;
+  
+  // Se ainda estiver carregando a sessão inicial e não temos um usuário, mostramos loading
+  if (loading && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground animate-pulse">Iniciando sistema...</p>
+      </div>
+    );
+  }
+  
+  // Se terminou de carregar e não há usuário, manda para o login
+  if (!loading && !user) return <Navigate to="/login" replace />;
+  
+  // Se temos um usuário (mesmo que o loading ainda esteja true buscando perfil), liberamos o acesso
   return <>{children}</>;
 }
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  
+  // Se já temos um usuário, manda direto para o dashboard
   if (user) return <Navigate to="/dashboard" replace />;
+  
+  // Se ainda está carregando, não mostra nada (evita flash do login)
+  if (loading) return null;
+  
   return <>{children}</>;
 }
 
