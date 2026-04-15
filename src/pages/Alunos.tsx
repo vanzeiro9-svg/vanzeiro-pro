@@ -195,7 +195,14 @@ const Alunos = () => {
       ) : (
         <div className="space-y-3">
           {alunos.map((aluno: any) => (
-            <Card key={aluno.id} className="p-4 animate-fade-in hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => handleEdit(aluno)}>
+            <div 
+              key={aluno.id} 
+              role="button"
+              tabIndex={0}
+              className="p-4 bg-white border rounded-xl animate-fade-in hover:bg-slate-50 active:bg-slate-100 active:scale-[0.98] transition-all cursor-pointer shadow-sm mb-3" 
+              onClick={() => handleEdit(aluno)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleEdit(aluno); }}
+            >
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-bold text-foreground">{aluno.nome}</h3>
@@ -210,18 +217,19 @@ const Alunos = () => {
                     'bg-muted text-muted-foreground'
                   }`}>{statusLabels[aluno.status]}</span>
                   <span className="text-sm font-bold text-foreground">R$ {Number(aluno.valor_mensalidade).toFixed(2)}</span>
-                  <a 
-                    href={`https://wa.me/55${aluno.responsavel_whatsapp.replace(/\D/g, '')}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-2 hover:bg-success/10 rounded-full transition-colors"
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(`https://wa.me/55${aluno.responsavel_whatsapp.replace(/\D/g, '')}`, '_blank');
+                    }}
+                    className="p-2 hover:bg-success/10 active:bg-success/20 rounded-full transition-colors text-success"
+                    aria-label="Ligar via WhatsApp"
                   >
-                    <Phone className="w-4 h-4 text-success" />
-                  </a>
+                    <Phone className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}
