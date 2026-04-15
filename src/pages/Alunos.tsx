@@ -86,7 +86,7 @@ const Alunos = () => {
       queryClient.invalidateQueries({ queryKey: ['alunos'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       setOpen(false);
-      setForm({ nome: '', responsavel_nome: '', responsavel_whatsapp: '', endereco_embarque: '', endereco_desembarque: '', escola: '', turno: 'manha', valor_mensalidade: '', status: 'ativo', rota_id: '' });
+      setForm({ nome: '', responsavel_nome: '', responsavel_whatsapp: '', endereco_embarque: '', endereco_desembarque: '', escola: '', turno: '', valor_mensalidade: '', status: 'ativo', rota_id: '' });
       toast({ title: 'Aluno cadastrado!' });
     },
     onError: (error: any) => {
