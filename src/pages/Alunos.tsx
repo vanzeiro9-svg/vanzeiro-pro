@@ -47,6 +47,24 @@ const Alunos = () => {
     },
   });
 
+  const { data: escolas = [] } = useQuery({
+    queryKey: ['escolas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('escolas').select('*').order('nome');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: turnos = [] } = useQuery({
+    queryKey: ['turnos'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('turnos').select('*').order('nome');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const addMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from('alunos').insert({
