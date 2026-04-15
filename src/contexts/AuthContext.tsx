@@ -42,13 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     loadData();
 
+    // Failsafe: se nada acontecer em 5 segundos, liberamos a tela
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      clearTimeout(timeout);
       const currentUser = session?.user ?? null;
       setSession(session);
       setUser(currentUser);
       
       if (currentUser) {
-        // Buscamos o perfil, mas não bloqueamos o loading se ele demorar
         supabase.from('profiles')
           .select('*')
           .eq('user_id', currentUser.id)
@@ -63,7 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, nome: string) => {
