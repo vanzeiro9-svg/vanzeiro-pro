@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 
 type CrudItem = { id: string; nome: string; user_id: string };
 
-const CrudSection = ({ title, icon: Icon, table, userId, defaultItems }: { title: string; icon: React.ElementType; table: 'escolas' | 'turnos' | 'rotas'; userId: string; defaultItems?: string[] }) => {
+const CrudSection = ({ title, icon: Icon, table, userId, defaultItems }: { title: string; icon: React.ElementType; table: string; userId: string; defaultItems?: string[] }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
@@ -326,7 +326,7 @@ const Configuracoes = () => {
           <hr className="border-border" />
           <CrudSection title="Rotas" icon={MapPin} table="rotas" userId={user.id} />
           <hr className="border-border" />
-          <CrudSection title="Turnos" icon={Clock} table="turnos" userId={user.id} />
+          <CrudSection title="Turnos" icon={Clock} table="turnos" userId={user.id} defaultItems={['Manhã', 'Tarde', 'Integral']} />
         </Card>
       )}
     </AppLayout>
