@@ -4,6 +4,7 @@ import { LayoutDashboard, Users, Wallet, FileText, ClipboardCheck, Settings } fr
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Início' },
   { to: '/alunos', icon: Users, label: 'Alunos' },
+  { to: '/frequencia', icon: ClipboardCheck, label: 'Chamada' },
   { to: '/mensalidades', icon: Wallet, label: 'Financeiro' },
   { to: '/documentos', icon: FileText, label: 'Detran' },
   { to: '/configuracoes', icon: Settings, label: 'Ajustes' },

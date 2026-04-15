@@ -67,8 +67,6 @@ const Configuracoes = () => {
     },
   });
 
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen"><p>Carregando...</p></div>;
-
   return (
     <AppLayout>
       <div className="mb-6">
@@ -76,88 +74,95 @@ const Configuracoes = () => {
         <p className="text-sm text-muted-foreground">Gerencie seus dados e do veículo</p>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(); }} className="space-y-6">
-        <Card className="p-4 space-y-4">
-          <div className="flex items-center gap-2 text-primary font-bold mb-2">
-            <User className="w-5 h-5" />
-            <span>Perfil do Motorista</span>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="nome">Nome Completo</Label>
-            <Input 
-              id="nome" 
-              value={form.nome} 
-              onChange={e => setForm({...form, nome: e.target.value})} 
-              className="touch-target"
-              placeholder="Como seus clientes te conhecem"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pix" className="flex items-center gap-2">
-               <CreditCard className="w-4 h-4" /> 
-               Chave Pix (Para cobranças)
-            </Label>
-            <Input 
-              id="pix" 
-              value={form.chave_pix} 
-              onChange={e => setForm({...form, chave_pix: e.target.value})} 
-              className="touch-target"
-            />
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <div className="space-y-0.5">
-              <Label htmlFor="avisos" className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4" /> 
-                Avisos do WhatsApp
-              </Label>
-              <p className="text-[10px] text-muted-foreground italic">Mostrar botão de notificação rápida na chamada</p>
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground animate-pulse">Carregando seus dados...</p>
+        </div>
+      ) : (
+        <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(); }} className="space-y-6">
+          <Card className="p-4 space-y-4">
+            <div className="flex items-center gap-2 text-primary font-bold mb-2">
+              <User className="w-5 h-5" />
+              <span>Perfil do Motorista</span>
             </div>
-            <Switch 
-              id="avisos" 
-              checked={form.avisos_whatsapp} 
-              onCheckedChange={v => setForm({...form, avisos_whatsapp: v})} 
-            />
-          </div>
-        </Card>
-
-        <Card className="p-4 space-y-4">
-          <div className="flex items-center gap-2 text-primary font-bold mb-2">
-            <Truck className="w-5 h-5" />
-            <span>Dados do Veículo</span>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="modelo">Modelo da Van</Label>
+              <Label htmlFor="nome">Nome Completo</Label>
               <Input 
-                id="modelo" 
-                value={form.veiculo_modelo} 
-                onChange={e => setForm({...form, veiculo_modelo: e.target.value})} 
+                id="nome" 
+                value={form.nome} 
+                onChange={e => setForm({...form, nome: e.target.value})} 
                 className="touch-target"
-                placeholder="Ex: Mercedes Sprinter 2022"
+                placeholder="Como seus clientes te conhecem"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="placa">Placa</Label>
+              <Label htmlFor="pix" className="flex items-center gap-2">
+                 <CreditCard className="w-4 h-4" /> 
+                 Chave Pix (Para cobranças)
+              </Label>
               <Input 
-                id="placa" 
-                value={form.veiculo_placa} 
-                onChange={e => setForm({...form, veiculo_placa: e.target.value})} 
-                className="touch-target uppercase"
-                placeholder="ABC-1234"
+                id="pix" 
+                value={form.chave_pix} 
+                onChange={e => setForm({...form, chave_pix: e.target.value})} 
+                className="touch-target"
               />
             </div>
-          </div>
-        </Card>
 
-        <Button 
-          type="submit" 
-          className="w-full touch-target font-bold"
-          disabled={updateMutation.isPending}
-        >
-          {updateMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-        </Button>
-      </form>
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <div className="space-y-0.5">
+                <Label htmlFor="avisos" className="flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" /> 
+                  Avisos do WhatsApp
+                </Label>
+                <p className="text-[10px] text-muted-foreground italic">Mostrar botão de notificação rápida na chamada</p>
+              </div>
+              <Switch 
+                id="avisos" 
+                checked={form.avisos_whatsapp} 
+                onCheckedChange={v => setForm({...form, avisos_whatsapp: v})} 
+              />
+            </div>
+          </Card>
+
+          <Card className="p-4 space-y-4">
+            <div className="flex items-center gap-2 text-primary font-bold mb-2">
+              <Truck className="w-5 h-5" />
+              <span>Dados do Veículo</span>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="modelo">Modelo da Van</Label>
+                <Input 
+                  id="modelo" 
+                  value={form.veiculo_modelo} 
+                  onChange={e => setForm({...form, veiculo_modelo: e.target.value})} 
+                  className="touch-target"
+                  placeholder="Ex: Mercedes Sprinter 2022"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="placa">Placa</Label>
+                <Input 
+                  id="placa" 
+                  value={form.veiculo_placa} 
+                  onChange={e => setForm({...form, veiculo_placa: e.target.value})} 
+                  className="touch-target uppercase"
+                  placeholder="ABC-1234"
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Button 
+            type="submit" 
+            className="w-full touch-target font-bold"
+            disabled={updateMutation.isPending}
+          >
+            {updateMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+          </Button>
+        </form>
+      )}
     </AppLayout>
   );
 };
