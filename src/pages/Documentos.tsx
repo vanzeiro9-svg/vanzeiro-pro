@@ -184,7 +184,7 @@ const Documentos = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-bold text-foreground text-sm truncate">{tipo}</h3>
                   {latest && (
-                    <Badge variant="ghost" className="h-5 text-[10px] bg-secondary/50">Ativo</Badge>
+                    <Badge variant="secondary" className="h-5 text-[10px] bg-secondary/50">Ativo</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
