@@ -32,7 +32,11 @@ const Alunos = () => {
   const { data: alunos = [], isLoading } = useQuery({
     queryKey: ['alunos'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('alunos').select('*, rotas(nome)').order('nome');
+      const { data, error } = await supabase
+        .from('alunos')
+        .select('*, rotas(nome)')
+        .eq('user_id', user!.id)
+        .order('nome');
       if (error) throw error;
       return data;
     },
@@ -41,7 +45,11 @@ const Alunos = () => {
   const { data: rotas = [] } = useQuery({
     queryKey: ['rotas'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('rotas').select('*').order('nome');
+      const { data, error } = await supabase
+        .from('rotas')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('nome');
       if (error) throw error;
       return data;
     },

@@ -7,9 +7,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/components/AppLayout';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const mesCorrente = new Date().toISOString().slice(0, 7); // YYYY-MM
   const inicioMesCorrente = `${mesCorrente}-01`;
   const inicioProximoMesCorrente = (() => {
@@ -22,19 +24,37 @@ const Dashboard = () => {
     year: 'numeric',
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats, error: statsError, isLoading: isStatsLoading } = useQuery({
     queryKey: ['dashboard-stats', mesCorrente],
     queryFn: async () => {
       const [alunosRes, mensalidadesRes, despesasRes, docsRes] = await Promise.all([
-        supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
-        supabase.from('mensalidades').select('valor, status').eq('mes_referencia', mesCorrente),
+        supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo').eq('user_id', user!.id),
+        supabase.from('mensalidades').select('valor, status').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
         supabase
           .from('despesas')
           .select('valor')
+          .eq('usuario_id', user!.id)
           .gte('data_despesa', inicioMesCorrente)
           .lt('data_despesa', inicioProximoMesCorrente),
-        supabase.from('documentos').select('*'),
+        supabase.from('documentos').select('*').eq('user_id', user!.id),
       ]);
+
+      const errors = [
+        ['alunos', alunosRes.error],
+        ['mensalidades', mensalidadesRes.error],
+        ['despesas', despesasRes.error],
+        ['documentos', docsRes.error],
+      ].filter(([, e]) => Boolean(e)) as Array<[string, NonNullable<typeof alunosRes.error>]>;
+
+      if (errors.length > 0) {
+        const details = errors
+          .map(([table, e]) => `${table}: ${e.message}${e.code ? ` (${e.code})` : ''}`)
+          .join(' | ');
+        throw new Error(
+          `Falha ao carregar dados do dashboard. ${details}. ` +
+            `Verifique se o Supabase do .env é o mesmo que contém seus dados e se as migrações/RLS foram aplicadas.`
+        );
+      }
 
       const now = new Date();
       const in30days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -136,7 +156,15 @@ const Dashboard = () => {
             Período financeiro: <span className="font-semibold capitalize">{stats?.periodo ?? periodoLabel}</span>
           </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={signOut} className="touch-target">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={async () => {
+            await signOut();
+            navigate('/', { replace: true });
+          }}
+          className="touch-target"
+        >
           <LogOut className="w-5 h-5" />
         </Button>
       </div>
@@ -147,6 +175,15 @@ const Dashboard = () => {
           <AlertTitle className="font-extrabold tracking-tight">ATENÇÃO CRÍTICA</AlertTitle>
           <AlertDescription className="font-medium">
             Risco de apreensão de veículo. Documentos vencidos!
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {statsError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Não foi possível carregar seus dados</AlertTitle>
+          <AlertDescription>
+            {statsError instanceof Error ? statsError.message : 'Erro desconhecido.'}
           </AlertDescription>
         </Alert>
       )}

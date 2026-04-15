@@ -18,11 +18,7 @@ const Landing = () => {
   const navigate = useNavigate();
 
   const handleCTA = () => {
-    if (user) {
-      navigate('/dashboard');
-    } else {
-      navigate('/auth/login');
-    }
+    navigate('/auth/signup');
   };
 
   const depoimentos = [
@@ -80,6 +76,11 @@ const Landing = () => {
               <Button onClick={handleCTA} size="lg" className="h-14 px-10 text-lg font-black shadow-xl shadow-primary/20 gap-2">
                 Começar Agora <ArrowRight className="w-5 h-5" />
               </Button>
+              {user && (
+                <Button variant="outline" size="lg" className="h-14 px-8 text-lg font-black" asChild>
+                  <Link to="/dashboard">Ir para o Painel</Link>
+                </Button>
+              )}
             </div>
 
             {/* Trust Badges */}

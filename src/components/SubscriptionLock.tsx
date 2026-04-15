@@ -7,10 +7,12 @@ import { Card } from './ui/card';
 import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { startStripeCheckout } from '@/lib/billing';
+import { useNavigate } from 'react-router-dom';
 
 const SubscriptionLock = () => {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [timeLeftMs, setTimeLeftMs] = useState(0);
 
@@ -21,10 +23,12 @@ const SubscriptionLock = () => {
     queryFn: async () => {
       const { count, error } = await supabase
         .from('alunos')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user!.id);
       if (error) throw error;
       return count || 0;
     },
+    enabled: !!user,
   });
 
   useEffect(() => {
@@ -120,7 +124,10 @@ const SubscriptionLock = () => {
             <Button 
               variant="ghost" 
               className="w-full touch-target text-muted-foreground hover:text-foreground gap-2"
-              onClick={signOut}
+              onClick={async () => {
+                await signOut();
+                navigate('/', { replace: true });
+              }}
             >
               <LogOut className="w-4 h-4" />
               Sair da conta

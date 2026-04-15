@@ -144,7 +144,7 @@ const Configuracoes = () => {
   const { data: escolas = [] } = useQuery({
     queryKey: ['escolas'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('escolas').select('*').order('nome');
+      const { data, error } = await supabase.from('escolas').select('*').eq('user_id', user!.id).order('nome');
       if (error) throw error;
       return data as { id: string; nome: string }[];
     },
@@ -175,7 +175,7 @@ const Configuracoes = () => {
   const { data: rotas = [] } = useQuery({
     queryKey: ['rotas'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('rotas').select('*').order('nome');
+      const { data, error } = await supabase.from('rotas').select('*').eq('user_id', user!.id).order('nome');
       if (error) throw error;
       return data as { id: string; nome: string }[];
     },
@@ -206,7 +206,7 @@ const Configuracoes = () => {
   const { data: turnos = [] } = useQuery({
     queryKey: ['turnos'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('turnos').select('*').order('nome');
+      const { data, error } = await supabase.from('turnos').select('*').eq('user_id', user!.id).order('nome');
       if (error) throw error;
       return data as { id: string; nome: string }[];
     },

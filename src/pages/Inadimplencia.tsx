@@ -27,6 +27,7 @@ const Inadimplencia = () => {
       const { data, error } = await supabase
         .from('mensalidades')
         .select('*, alunos(nome, responsavel_nome, responsavel_whatsapp)')
+        .eq('user_id', user!.id)
         .order('mes_referencia', { ascending: false });
       
       if (error) throw error;

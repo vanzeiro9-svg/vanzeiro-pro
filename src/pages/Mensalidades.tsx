@@ -113,6 +113,7 @@ const Mensalidades = () => {
       const { data, error } = await supabase
         .from('despesas')
         .select('id, categoria, valor, data_despesa')
+        .eq('usuario_id', user!.id)
         .gte('data_despesa', inicioMesFiltro)
         .lt('data_despesa', inicioProximoMes)
         .order('data_despesa', { ascending: false });
@@ -136,6 +137,8 @@ const Mensalidades = () => {
       }
 
       const { error } = await supabase.from('despesas').insert({
+        usuario_id: user!.id,
+        descricao: despesaForm.categoria,
         categoria: despesaForm.categoria,
         valor,
         data_despesa: despesaForm.data_despesa,

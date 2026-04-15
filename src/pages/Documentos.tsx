@@ -39,7 +39,11 @@ const Documentos = () => {
   const { data: documentos = [], isLoading } = useQuery({
     queryKey: ['documentos'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('documentos').select('*').order('data_vencimento');
+      const { data, error } = await supabase
+        .from('documentos')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('data_vencimento');
       if (error) throw error;
       return data;
     },

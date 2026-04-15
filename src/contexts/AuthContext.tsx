@@ -99,8 +99,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    setLoading(true);
+    try {
+      // Primeiro tenta encerrar a sessão no cliente (mais confiável para "deslogar" na hora).
+      // Se a lib não suportar scope/local, ela simplesmente ignora o objeto.
+      // @ts-expect-error - compat com versões diferentes do supabase-js
+      await supabase.auth.signOut({ scope: 'local' });
+
+      // Em seguida tenta encerrar globalmente (revoga refresh token no servidor).
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      // Fallback: mesmo que a chamada falhe, garantimos logout local limpando storage e estado.
+      console.warn('Falha ao deslogar via Supabase, limpando sessão local.', error);
+    } finally {
+      try {
+        // Remove tokens persistidos do Supabase (padrão: sb-<project-ref>-auth-token)
+        for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          if (key.startsWith('sb-') && key.includes('-auth-token')) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setLoading(false);
+    }
   };
 
   const refreshProfile = async () => {
