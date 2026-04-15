@@ -26,7 +26,7 @@ const Alunos = () => {
   const [form, setForm] = useState({
     nome: '', responsavel_nome: '', responsavel_whatsapp: '',
     endereco_embarque: '', endereco_desembarque: '', escola: '',
-    turno: 'manha', valor_mensalidade: '', status: 'ativo', rota_id: '',
+    turno: '', valor_mensalidade: '', status: 'ativo', rota_id: '',
   });
 
   const { data: alunos = [], isLoading } = useQuery({
