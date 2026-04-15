@@ -121,7 +121,7 @@ const CrudSection = ({ title, icon: Icon, table, userId }: { title: string; icon
                     onKeyDown={e => { if (e.key === 'Enter' && editName.trim()) updateMutation.mutate({ id: item.id, nome: editName.trim() }); if (e.key === 'Escape') setEditingId(null); }}
                   />
                   <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => { if (editName.trim()) updateMutation.mutate({ id: item.id, nome: editName.trim() }); }}>
-                    <Check className="w-4 h-4 text-green-600" />
+                    <Check className="w-4 h-4 text-primary" />
                   </Button>
                   <Button type="button" size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}>
                     <X className="w-4 h-4" />
