@@ -179,17 +179,24 @@ const Dashboard = () => {
       )}
 
       <div className="grid grid-cols-1 gap-3 mb-6">
-        {cards.map((card) => (
-          <Card key={card.label} className="p-4 flex items-center gap-4 animate-fade-in">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.bg}`}>
-              <card.icon className={`w-6 h-6 ${card.color}`} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{card.value}</p>
-              <p className="text-sm text-muted-foreground">{card.label}</p>
-            </div>
-          </Card>
-        ))}
+        {cards.map((card: any) => {
+          const content = (
+            <Card key={card.label} className={`p-4 flex items-center gap-4 animate-fade-in ${card.link ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.bg}`}>
+                <card.icon className={`w-6 h-6 ${card.color}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{card.value}</p>
+                <p className="text-sm text-muted-foreground">{card.label}</p>
+              </div>
+            </Card>
+          );
+          return card.link ? (
+            <div key={card.label} onClick={() => navigate(card.link)}>{content}</div>
+          ) : (
+            <div key={card.label}>{content}</div>
+          );
+        })}
       </div>
 
       <Card className="p-4 mb-6">
