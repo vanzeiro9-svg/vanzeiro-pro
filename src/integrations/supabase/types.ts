@@ -106,6 +106,27 @@ export type Database = {
         }
         Relationships: []
       }
+      escolas: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       frequencias: {
         Row: {
           aluno_id: string
@@ -188,36 +209,21 @@ export type Database = {
           email: string | null
           id: string
           nome: string
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
-          subscription_active: boolean
-          subscription_status: string
           user_id: string
-          whatsapp: string | null
         }
         Insert: {
           created_at?: string
           email?: string | null
           id?: string
           nome?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          subscription_active?: boolean
-          subscription_status?: string
           user_id: string
-          whatsapp?: string | null
         }
         Update: {
           created_at?: string
           email?: string | null
           id?: string
           nome?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          subscription_active?: boolean
-          subscription_status?: string
           user_id?: string
-          whatsapp?: string | null
         }
         Relationships: []
       }
@@ -241,6 +247,27 @@ export type Database = {
           id?: string
           nome?: string
           turno?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      turnos: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
           user_id?: string
         }
         Relationships: []
