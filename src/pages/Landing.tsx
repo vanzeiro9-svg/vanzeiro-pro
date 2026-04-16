@@ -327,9 +327,9 @@ const Landing = () => {
             </p>
           </div>
           <div className="flex flex-col md:flex-row gap-8 md:justify-end text-slate-500 font-bold text-sm uppercase tracking-widest">
-            <Link to="#" className="hover:text-primary transition-colors">Termos de Uso</Link>
-            <Link to="#" className="hover:text-primary transition-colors">Política de Privacidade</Link>
-            <span className="text-slate-300 font-normal">Copyright © 2025 Vanzeiro</span>
+            <Link to="/termos-de-uso" className="hover:text-primary transition-colors">Termos de Uso</Link>
+            <Link to="/politica-de-privacidade" className="hover:text-primary transition-colors">Política de Privacidade</Link>
+            <span className="text-slate-300 font-normal">Copyright © 2026 Vanzeiro</span>
           </div>
         </div>
       </footer>

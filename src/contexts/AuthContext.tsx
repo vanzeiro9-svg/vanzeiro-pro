@@ -9,6 +9,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, nome: string, whatsapp: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
   profile: any;
   refreshProfile: () => Promise<void>;
 }
@@ -22,13 +23,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
+    const query = supabase.from('profiles').select('*').eq('user_id', userId).single();
+    const { data, error } = await Promise.race([
+      query,
+      new Promise<{ data: null; error: { message: string } }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: { message: 'PROFILE_FETCH_TIMEOUT' } }), 20_000),
+      ),
+    ]);
 
-    if (error) throw error;
+    if (error) {
+      if (error.message === 'PROFILE_FETCH_TIMEOUT') {
+        console.warn('Timeout ao carregar perfil; tente recarregar a página.');
+      }
+      throw error;
+    }
     setProfile(data);
   };
 
@@ -57,25 +65,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }, 5000);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Nunca use await em chamadas supabase dentro deste callback — causa deadlock com updateUser/setSession etc.
+    // Ver: https://supabase.com/docs/reference/javascript/auth-onauthstatechange
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       clearTimeout(timeout);
       setLoading(true);
       const currentUser = session?.user ?? null;
       setSession(session);
       setUser(currentUser);
-      
+
       if (currentUser) {
-        try {
-          await fetchProfile(currentUser.id);
-        } catch (error) {
-          console.error('Erro ao buscar perfil:', error);
-          setProfile(null);
-        }
+        void (async () => {
+          try {
+            await fetchProfile(currentUser.id);
+          } catch (error) {
+            console.error('Erro ao buscar perfil:', error);
+            setProfile(null);
+          } finally {
+            setLoading(false);
+          }
+        })();
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => {
@@ -95,6 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    const redirectTo = `${window.location.origin}/auth/redefinir-senha`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     if (error) throw error;
   };
 
@@ -140,7 +159,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, profile, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        signUp,
+        signIn,
+        signOut,
+        requestPasswordReset,
+        profile,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

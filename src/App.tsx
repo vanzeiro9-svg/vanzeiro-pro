@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AuthLogin from "./pages/AuthLogin";
 import AuthSignup from "./pages/AuthSignup";
+import AuthRedefinirSenha from "./pages/AuthRedefinirSenha";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Alunos from "./pages/Alunos";
@@ -14,6 +15,8 @@ import Documentos from "./pages/Documentos";
 import Frequencia from "./pages/Frequencia";
 import Configuracoes from "./pages/Configuracoes";
 import Planos from "./pages/Planos";
+import TermosDeUso from "./pages/TermosDeUso";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,8 +63,11 @@ const App = () => (
           <Routes>
             <Route path="/auth/login" element={<AuthRoute><AuthLogin /></AuthRoute>} />
             <Route path="/auth/signup" element={<AuthRoute><AuthSignup /></AuthRoute>} />
+            <Route path="/auth/redefinir-senha" element={<AuthRedefinirSenha />} />
             <Route path="/login" element={<Navigate to="/auth/login" replace />} />
             <Route path="/" element={<Landing />} />
+            <Route path="/termos-de-uso" element={<TermosDeUso />} />
+            <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/planos" element={<ProtectedRoute><Planos /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/alunos" element={<ProtectedRoute><Alunos /></ProtectedRoute>} />
