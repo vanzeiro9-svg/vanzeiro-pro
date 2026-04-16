@@ -13,12 +13,6 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const mesCorrente = new Date().toISOString().slice(0, 7); // YYYY-MM
-  const inicioMesCorrente = `${mesCorrente}-01`;
-  const inicioProximoMesCorrente = (() => {
-    const [ano, mes] = mesCorrente.split('-').map(Number);
-    const proximo = new Date(ano, mes, 1);
-    return `${proximo.getFullYear()}-${String(proximo.getMonth() + 1).padStart(2, '0')}-01`;
-  })();
   const periodoLabel = new Date(`${mesCorrente}-02`).toLocaleDateString('pt-BR', {
     month: 'long',
     year: 'numeric',
@@ -64,7 +58,7 @@ const Dashboard = () => {
         .filter((m) => m.status === 'atrasado')
         .reduce((acc, curr) => acc + Number(curr.valor), 0);
 
-      const despesasTotais = (despesasRes.data || []).reduce((acc, curr) => acc + Number(curr.valor), 0);
+      const despesasTotais = 0;
       const lucroLiquido = receitaBruta - despesasTotais;
 
       const hasExpiredDoc = (docsRes.data || []).some((d) => {
