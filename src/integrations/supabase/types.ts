@@ -76,6 +76,42 @@ export type Database = {
           },
         ]
       }
+      despesas: {
+        Row: {
+          categoria: string
+          created_at: string
+          data_despesa: string
+          descricao: string
+          id: string
+          mes_referencia: string
+          recorrente: boolean
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          data_despesa?: string
+          descricao: string
+          id?: string
+          mes_referencia?: string
+          recorrente?: boolean
+          user_id: string
+          valor?: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data_despesa?: string
+          descricao?: string
+          id?: string
+          mes_referencia?: string
+          recorrente?: boolean
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       documentos: {
         Row: {
           arquivo_url: string | null
