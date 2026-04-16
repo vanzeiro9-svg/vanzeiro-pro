@@ -21,16 +21,18 @@ const Dashboard = () => {
   const { data: stats, error: statsError, isLoading: isStatsLoading } = useQuery({
     queryKey: ['dashboard-stats', mesCorrente],
     queryFn: async () => {
-      const [alunosRes, mensalidadesRes, docsRes] = await Promise.all([
+      const [alunosRes, mensalidadesRes, docsRes, despesasRes] = await Promise.all([
         supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo').eq('user_id', user!.id),
         supabase.from('mensalidades').select('valor, status').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
         supabase.from('documentos').select('*').eq('user_id', user!.id),
+        supabase.from('despesas').select('valor').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
       ]);
 
       const errors = [
         ['alunos', alunosRes.error],
         ['mensalidades', mensalidadesRes.error],
         ['documentos', docsRes.error],
+        ['despesas', despesasRes.error],
       ].filter(([, e]) => Boolean(e)) as Array<[string, NonNullable<typeof alunosRes.error>]>;
 
       if (errors.length > 0) {
@@ -58,7 +60,8 @@ const Dashboard = () => {
         .filter((m) => m.status === 'atrasado')
         .reduce((acc, curr) => acc + Number(curr.valor), 0);
 
-      const despesasTotais = 0;
+      const despesasTotais = (despesasRes.data || [])
+        .reduce((acc, curr) => acc + Number(curr.valor), 0);
       const lucroLiquido = receitaBruta - despesasTotais;
 
       const hasExpiredDoc = (docsRes.data || []).some((d) => {
@@ -115,6 +118,7 @@ const Dashboard = () => {
       icon: CreditCard,
       color: 'text-rose-700',
       bg: 'bg-rose-100',
+      link: '/despesas',
     },
     {
       label: 'Lucro Líquido',
@@ -175,17 +179,24 @@ const Dashboard = () => {
       )}
 
       <div className="grid grid-cols-1 gap-3 mb-6">
-        {cards.map((card) => (
-          <Card key={card.label} className="p-4 flex items-center gap-4 animate-fade-in">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.bg}`}>
-              <card.icon className={`w-6 h-6 ${card.color}`} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground">{card.value}</p>
-              <p className="text-sm text-muted-foreground">{card.label}</p>
-            </div>
-          </Card>
-        ))}
+        {cards.map((card: any) => {
+          const content = (
+            <Card key={card.label} className={`p-4 flex items-center gap-4 animate-fade-in ${card.link ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.bg}`}>
+                <card.icon className={`w-6 h-6 ${card.color}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{card.value}</p>
+                <p className="text-sm text-muted-foreground">{card.label}</p>
+              </div>
+            </Card>
+          );
+          return card.link ? (
+            <div key={card.label} onClick={() => navigate(card.link)}>{content}</div>
+          ) : (
+            <div key={card.label}>{content}</div>
+          );
+        })}
       </div>
 
       <Card className="p-4 mb-6">
