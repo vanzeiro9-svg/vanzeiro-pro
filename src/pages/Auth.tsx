@@ -22,7 +22,7 @@ const Auth = () => {
       if (isLogin) {
         await signIn(email, password);
       } else {
-        await signUp(email, password, nome);
+        await signUp(email, password, nome, '');
         toast({
           title: 'Conta criada!',
           description: 'Verifique seu email para confirmar o cadastro.',

@@ -122,8 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Primeiro tenta encerrar a sessão no cliente (mais confiável para "deslogar" na hora).
       // Se a lib não suportar scope/local, ela simplesmente ignora o objeto.
-      // @ts-expect-error - compat com versões diferentes do supabase-js
-      await supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.signOut({ scope: 'local' } as any);
 
       // Em seguida tenta encerrar globalmente (revoga refresh token no servidor).
       const { error } = await supabase.auth.signOut();
