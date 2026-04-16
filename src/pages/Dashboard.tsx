@@ -118,6 +118,7 @@ const Dashboard = () => {
       icon: CreditCard,
       color: 'text-rose-700',
       bg: 'bg-rose-100',
+      link: '/despesas',
     },
     {
       label: 'Lucro Líquido',
