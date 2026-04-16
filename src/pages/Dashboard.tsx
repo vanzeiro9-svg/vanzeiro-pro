@@ -27,22 +27,15 @@ const Dashboard = () => {
   const { data: stats, error: statsError, isLoading: isStatsLoading } = useQuery({
     queryKey: ['dashboard-stats', mesCorrente],
     queryFn: async () => {
-      const [alunosRes, mensalidadesRes, despesasRes, docsRes] = await Promise.all([
+      const [alunosRes, mensalidadesRes, docsRes] = await Promise.all([
         supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo').eq('user_id', user!.id),
         supabase.from('mensalidades').select('valor, status').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
-        supabase
-          .from('despesas')
-          .select('valor')
-          .eq('usuario_id', user!.id)
-          .gte('data_despesa', inicioMesCorrente)
-          .lt('data_despesa', inicioProximoMesCorrente),
         supabase.from('documentos').select('*').eq('user_id', user!.id),
       ]);
 
       const errors = [
         ['alunos', alunosRes.error],
         ['mensalidades', mensalidadesRes.error],
-        ['despesas', despesasRes.error],
         ['documentos', docsRes.error],
       ].filter(([, e]) => Boolean(e)) as Array<[string, NonNullable<typeof alunosRes.error>]>;
 
@@ -51,8 +44,7 @@ const Dashboard = () => {
           .map(([table, e]) => `${table}: ${e.message}${e.code ? ` (${e.code})` : ''}`)
           .join(' | ');
         throw new Error(
-          `Falha ao carregar dados do dashboard. ${details}. ` +
-            `Verifique se o Supabase do .env é o mesmo que contém seus dados e se as migrações/RLS foram aplicadas.`
+          `Falha ao carregar dados do dashboard. ${details}.`
         );
       }
 
