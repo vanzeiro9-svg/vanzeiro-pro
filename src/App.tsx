@@ -14,6 +14,7 @@ import Inadimplencia from "./pages/Inadimplencia";
 import Documentos from "./pages/Documentos";
 import Frequencia from "./pages/Frequencia";
 import Configuracoes from "./pages/Configuracoes";
+import Despesas from "./pages/Despesas";
 import Planos from "./pages/Planos";
 import TermosDeUso from "./pages/TermosDeUso";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
@@ -75,6 +76,7 @@ const App = () => (
             <Route path="/inadimplencia" element={<ProtectedRoute><Inadimplencia /></ProtectedRoute>} />
             <Route path="/documentos" element={<ProtectedRoute><Documentos /></ProtectedRoute>} />
             <Route path="/frequencia" element={<ProtectedRoute><Frequencia /></ProtectedRoute>} />
+            <Route path="/despesas" element={<ProtectedRoute><Despesas /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

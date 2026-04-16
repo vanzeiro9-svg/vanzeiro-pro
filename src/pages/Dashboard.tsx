@@ -21,16 +21,18 @@ const Dashboard = () => {
   const { data: stats, error: statsError, isLoading: isStatsLoading } = useQuery({
     queryKey: ['dashboard-stats', mesCorrente],
     queryFn: async () => {
-      const [alunosRes, mensalidadesRes, docsRes] = await Promise.all([
+      const [alunosRes, mensalidadesRes, docsRes, despesasRes] = await Promise.all([
         supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo').eq('user_id', user!.id),
         supabase.from('mensalidades').select('valor, status').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
         supabase.from('documentos').select('*').eq('user_id', user!.id),
+        supabase.from('despesas').select('valor').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
       ]);
 
       const errors = [
         ['alunos', alunosRes.error],
         ['mensalidades', mensalidadesRes.error],
         ['documentos', docsRes.error],
+        ['despesas', despesasRes.error],
       ].filter(([, e]) => Boolean(e)) as Array<[string, NonNullable<typeof alunosRes.error>]>;
 
       if (errors.length > 0) {
@@ -58,7 +60,8 @@ const Dashboard = () => {
         .filter((m) => m.status === 'atrasado')
         .reduce((acc, curr) => acc + Number(curr.valor), 0);
 
-      const despesasTotais = 0;
+      const despesasTotais = (despesasRes.data || [])
+        .reduce((acc, curr) => acc + Number(curr.valor), 0);
       const lucroLiquido = receitaBruta - despesasTotais;
 
       const hasExpiredDoc = (docsRes.data || []).some((d) => {
