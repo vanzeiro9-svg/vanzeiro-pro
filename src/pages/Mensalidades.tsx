@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, MessageSquare, History, Search, X } from 'lucide-react';
+import { Check, MessageSquare, History, Search, X, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,6 +25,33 @@ const Mensalidades = () => {
   });
   const [mostrarControlePagamentos, setMostrarControlePagamentos] = useState(false);
   const [buscaNome, setBuscaNome] = useState('');
+
+  // Categorias de despesas - padrão + personalizadas (salvas no localStorage)
+  const CATEGORIAS_PADRAO = ['Combustível', 'Manutenção', 'Seguro', 'IPVA', 'Pneus', 'Outros'];
+  const [categoriasCustom, setCategoriasCustom] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('despesas_categorias') || '[]'); } catch { return []; }
+  });
+  const [novaCategoria, setNovaCategoria] = useState('');
+  const [mostrarNovaCategoria, setMostrarNovaCategoria] = useState(false);
+
+  const todasCategorias = [...CATEGORIAS_PADRAO, ...categoriasCustom];
+
+  const adicionarCategoria = () => {
+    const cat = novaCategoria.trim();
+    if (!cat || todasCategorias.includes(cat)) return;
+    const novas = [...categoriasCustom, cat];
+    setCategoriasCustom(novas);
+    localStorage.setItem('despesas_categorias', JSON.stringify(novas));
+    setDespesaForm((prev) => ({ ...prev, categoria: cat }));
+    setNovaCategoria('');
+    setMostrarNovaCategoria(false);
+  };
+
+  const removerCategoriaCustom = (cat: string) => {
+    const novas = categoriasCustom.filter(c => c !== cat);
+    setCategoriasCustom(novas);
+    localStorage.setItem('despesas_categorias', JSON.stringify(novas));
+  };
   const inicioMesFiltro = `${mesFiltro}-01`;
   const inicioProximoMes = (() => {
     const [ano, mes] = mesFiltro.split('-').map(Number);
@@ -217,19 +244,65 @@ const Mensalidades = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-1.5">
             <Label>Categoria</Label>
-            <Select
-              value={despesaForm.categoria}
-              onValueChange={(value) => setDespesaForm((prev) => ({ ...prev, categoria: value }))}
-            >
-              <SelectTrigger className="touch-target">
-                <SelectValue placeholder="Selecione a categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Combustivel">Combustível</SelectItem>
-                <SelectItem value="Manutenção">Manutenção</SelectItem>
-                <SelectItem value="Outros">Outros</SelectItem>
-              </SelectContent>
-            </Select>
+            {mostrarNovaCategoria ? (
+              <div className="flex gap-2">
+                <Input
+                  autoFocus
+                  value={novaCategoria}
+                  onChange={e => setNovaCategoria(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); adicionarCategoria(); } }}
+                  placeholder="Nome da nova categoria..."
+                  className="touch-target flex-1"
+                />
+                <Button type="button" onClick={adicionarCategoria} size="sm" className="h-11 px-3 shrink-0">
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="h-11 px-3 shrink-0" onClick={() => { setMostrarNovaCategoria(false); setNovaCategoria(''); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <Select
+                value={despesaForm.categoria}
+                onValueChange={(value) => {
+                  if (value === '__nova__') { setMostrarNovaCategoria(true); return; }
+                  setDespesaForm((prev) => ({ ...prev, categoria: value }));
+                }}
+              >
+                <SelectTrigger className="touch-target">
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIAS_PADRAO.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                  {categoriasCustom.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Personalizadas</div>
+                      {categoriasCustom.map(cat => (
+                        <div key={cat} className="flex items-center justify-between pr-2">
+                          <SelectItem value={cat}>{cat}</SelectItem>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); removerCategoriaCustom(cat); }}
+                            className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  <div className="border-t border-border mt-1 pt-1">
+                    <SelectItem value="__nova__">
+                      <span className="flex items-center gap-2 text-primary font-semibold">
+                        <Plus className="w-3.5 h-3.5" /> Nova categoria...
+                      </span>
+                    </SelectItem>
+                  </div>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-1.5">

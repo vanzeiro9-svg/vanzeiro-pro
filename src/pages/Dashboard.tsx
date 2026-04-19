@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { AlertTriangle, CreditCard, FileWarning, LogOut, ShieldAlert, TrendingUp, Users, Wallet } from 'lucide-react';
@@ -45,11 +46,28 @@ const Dashboard = () => {
       }
 
       const now = new Date();
+      now.setHours(0, 0, 0, 0);
       const in30days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-      const docsVencendo = (docsRes.data || []).filter((d) => {
-        const venc = new Date(d.data_vencimento);
+      // Pega apenas o doc mais recente por tipo antes de filtrar
+      const latestByTipo: Record<string, any> = {};
+      (docsRes.data || []).forEach((d) => {
+        if (!latestByTipo[d.tipo] || new Date(d.created_at) > new Date(latestByTipo[d.tipo].created_at)) {
+          latestByTipo[d.tipo] = d;
+        }
+      });
+      const docsLatest = Object.values(latestByTipo);
+
+      const docsVencendo = docsLatest.filter((d) => {
+        if (!d.data_vencimento) return false;
+        const venc = new Date(d.data_vencimento + 'T00:00:00');
         return venc <= in30days;
+      });
+
+      const docsVencidos = docsLatest.filter((d) => {
+        if (!d.data_vencimento) return false;
+        const venc = new Date(d.data_vencimento + 'T00:00:00');
+        return venc < now;
       });
 
       const receitaBruta = (mensalidadesRes.data || [])
@@ -64,10 +82,7 @@ const Dashboard = () => {
         .reduce((acc, curr) => acc + Number(curr.valor), 0);
       const lucroLiquido = receitaBruta - despesasTotais;
 
-      const hasExpiredDoc = (docsRes.data || []).some((d) => {
-        const venc = new Date(d.data_vencimento);
-        return venc < now;
-      });
+      const hasExpiredDoc = docsVencidos.length > 0;
 
       return {
         periodo: periodoLabel,
@@ -81,6 +96,8 @@ const Dashboard = () => {
           { nome: 'Despesas', valor: despesasTotais },
         ],
         docsVencendo: docsVencendo.length,
+        docsVencidos: docsVencidos.length,
+        docsCriticos: docsVencendo.length,
         docsUrgentes: docsVencendo.slice(0, 3),
         hasExpiredDoc,
       };
@@ -214,35 +231,45 @@ const Dashboard = () => {
         </div>
       </Card>
 
-      {stats?.docsUrgentes && stats.docsUrgentes.length > 0 && (
+      {stats?.docsCriticos != null && stats.docsCriticos > 0 && (
         <div className="mb-6">
-          <h2 className="text-base font-bold text-foreground mb-3">⚠️ Documentos urgentes</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-foreground">⚠️ Documentos urgentes</h2>
+            <Link
+              to="/documentos?filtro=criticos"
+              className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full hover:bg-amber-100 transition-colors"
+            >
+              Ver todos ({stats.docsCriticos})
+            </Link>
+          </div>
           <div className="space-y-2">
             {stats.docsUrgentes.map((doc: any) => {
-              const venc = new Date(doc.data_vencimento);
-              const now = new Date();
+              const now = new Date(); now.setHours(0,0,0,0);
+              const venc = new Date(doc.data_vencimento + 'T00:00:00');
               const dias = Math.ceil((venc.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
               const isVencido = dias < 0;
               return (
-                <Card key={doc.id} className="p-3 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-sm text-foreground">{doc.tipo}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Vence: {venc.toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-xs font-bold px-2 py-1 rounded-full ${
-                      isVencido
-                        ? 'bg-destructive/10 text-destructive'
-                        : dias <= 7
-                        ? 'bg-destructive/10 text-destructive'
-                        : 'bg-warning/10 text-warning'
-                    }`}
-                  >
-                    {isVencido ? 'Vencido' : `${dias} dias`}
-                  </span>
-                </Card>
+                <Link key={doc.id} to="/documentos?filtro=criticos">
+                  <Card className="p-3 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer">
+                    <div>
+                      <p className="font-semibold text-sm text-foreground">{doc.tipo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Vence: {venc.toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-xs font-bold px-2 py-1 rounded-full ${
+                        isVencido
+                          ? 'bg-destructive/10 text-destructive'
+                          : dias <= 7
+                          ? 'bg-destructive/10 text-destructive'
+                          : 'bg-warning/10 text-warning'
+                      }`}
+                    >
+                      {isVencido ? 'Vencido' : `em ${dias}d`}
+                    </span>
+                  </Card>
+                </Link>
               );
             })}
           </div>
