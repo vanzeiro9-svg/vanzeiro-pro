@@ -140,36 +140,6 @@ const Configuracoes = () => {
     },
   });
 
-  // --- Escolas ---
-  const { data: escolas = [] } = useQuery({
-    queryKey: ['escolas'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('escolas').select('*').eq('user_id', user!.id).order('nome');
-      if (error) throw error;
-      return data as { id: string; nome: string }[];
-    },
-  });
-
-  const addEscolaMutation = useMutation({
-    mutationFn: async (nome: string) => {
-      const { error } = await supabase.from('escolas').insert({ user_id: user!.id, nome });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['escolas'] });
-      toast({ title: 'Escola adicionada!' });
-    },
-    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
-  });
-
-  const deleteEscolaMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('escolas').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['escolas'] }),
-    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
-  });
 
   // --- Rotas ---
   const { data: rotas = [] } = useQuery({
@@ -202,36 +172,6 @@ const Configuracoes = () => {
     onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
   });
 
-  // --- Turnos ---
-  const { data: turnos = [] } = useQuery({
-    queryKey: ['turnos'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('turnos').select('*').eq('user_id', user!.id).order('nome');
-      if (error) throw error;
-      return data as { id: string; nome: string }[];
-    },
-  });
-
-  const addTurnoMutation = useMutation({
-    mutationFn: async (nome: string) => {
-      const { error } = await supabase.from('turnos').insert({ user_id: user!.id, nome });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['turnos'] });
-      toast({ title: 'Turno adicionado!' });
-    },
-    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
-  });
-
-  const deleteTurnoMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('turnos').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['turnos'] }),
-    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
-  });
 
   const manageSubscriptionMutation = useMutation({
     mutationFn: async () => {
@@ -365,18 +305,6 @@ const Configuracoes = () => {
 
             <div className="border-t border-border pt-4">
               <ParamList
-                title="Escolas"
-                icon={School}
-                items={escolas}
-                onAdd={nome => addEscolaMutation.mutate(nome)}
-                onDelete={id => deleteEscolaMutation.mutate(id)}
-                placeholder="Nome da escola..."
-                isAdding={addEscolaMutation.isPending}
-              />
-            </div>
-
-            <div className="border-t border-border pt-4">
-              <ParamList
                 title="Rotas"
                 icon={MapPin}
                 items={rotas}
@@ -384,18 +312,6 @@ const Configuracoes = () => {
                 onDelete={id => deleteRotaMutation.mutate(id)}
                 placeholder="Nome da rota..."
                 isAdding={addRotaMutation.isPending}
-              />
-            </div>
-
-            <div className="border-t border-border pt-4">
-              <ParamList
-                title="Turnos"
-                icon={Clock}
-                items={turnos}
-                onAdd={nome => addTurnoMutation.mutate(nome)}
-                onDelete={id => deleteTurnoMutation.mutate(id)}
-                placeholder="Ex: Manhã, Tarde, Integral..."
-                isAdding={addTurnoMutation.isPending}
               />
             </div>
           </Card>
