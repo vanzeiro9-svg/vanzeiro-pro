@@ -58,22 +58,12 @@ const Alunos = () => {
     },
   });
 
-  const { data: escolas = [] } = useQuery({
-    queryKey: ['escolas'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('escolas').select('*').order('nome');
-      if (error) throw error;
-      return data as { id: string; nome: string }[];
-    },
+  const [escolas, setEscolas] = useState<{ id: string; nome: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('vanzeiro_escolas') || '[]'); } catch { return []; }
   });
 
-  const { data: turnos = [] } = useQuery({
-    queryKey: ['turnos'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('turnos').select('*').order('nome');
-      if (error) throw error;
-      return data as { id: string; nome: string }[];
-    },
+  const [turnos, setTurnos] = useState<{ id: string; nome: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('vanzeiro_turnos') || '[]'); } catch { return []; }
   });
 
   const addMutation = useMutation({
@@ -277,9 +267,10 @@ const Alunos = () => {
                       const fone = (aluno.responsavel_whatsapp || '').replace(/\D/g, '');
                       window.open(`https://wa.me/55${fone}`, '_blank');
                     }}
-                    className="p-2 hover:bg-success/10 active:bg-success/20 rounded-full transition-colors text-success"
+                    className="flex items-center gap-1.5 px-3 py-1.5 mt-1 hover:bg-success/10 active:bg-success/20 rounded-full transition-colors text-success bg-success/5 border border-success/20"
                   >
-                    <Phone className="w-4 h-4" />
+                    <Phone className="w-3.5 h-3.5" />
+                    <span className="text-[11px] font-extrabold uppercase tracking-wide">Enviar msg</span>
                   </button>
                 </div>
               </div>

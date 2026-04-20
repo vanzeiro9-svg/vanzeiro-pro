@@ -140,36 +140,23 @@ const Configuracoes = () => {
     },
   });
 
-  // --- Escolas ---
-  const { data: escolas = [] } = useQuery({
-    queryKey: ['escolas'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('escolas').select('*').eq('user_id', user!.id).order('nome');
-      if (error) throw error;
-      return data as { id: string; nome: string }[];
-    },
+  // --- Escolas (LocalStorage) ---
+  const [escolas, setEscolas] = useState<{ id: string; nome: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('vanzeiro_escolas') || '[]'); } catch { return []; }
   });
 
-  const addEscolaMutation = useMutation({
-    mutationFn: async (nome: string) => {
-      const { error } = await supabase.from('escolas').insert({ user_id: user!.id, nome });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['escolas'] });
-      toast({ title: 'Escola adicionada!' });
-    },
-    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
-  });
+  const handleAddEscola = (nome: string) => {
+    const novas = [...escolas, { id: Date.now().toString() + Math.random(), nome }];
+    setEscolas(novas);
+    localStorage.setItem('vanzeiro_escolas', JSON.stringify(novas));
+    toast({ title: 'Escola adicionada!' });
+  };
 
-  const deleteEscolaMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('escolas').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['escolas'] }),
-    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
-  });
+  const handleDeleteEscola = (id: string) => {
+    const novas = escolas.filter(e => e.id !== id);
+    setEscolas(novas);
+    localStorage.setItem('vanzeiro_escolas', JSON.stringify(novas));
+  };
 
   // --- Rotas ---
   const { data: rotas = [] } = useQuery({
@@ -183,7 +170,7 @@ const Configuracoes = () => {
 
   const addRotaMutation = useMutation({
     mutationFn: async (nome: string) => {
-      const { error } = await supabase.from('rotas').insert({ user_id: user!.id, nome });
+      const { error } = await supabase.from('rotas').insert({ user_id: user!.id, nome, turno: 'manha' });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -202,36 +189,23 @@ const Configuracoes = () => {
     onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
   });
 
-  // --- Turnos ---
-  const { data: turnos = [] } = useQuery({
-    queryKey: ['turnos'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('turnos').select('*').eq('user_id', user!.id).order('nome');
-      if (error) throw error;
-      return data as { id: string; nome: string }[];
-    },
+  // --- Turnos (LocalStorage) ---
+  const [turnos, setTurnos] = useState<{ id: string; nome: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('vanzeiro_turnos') || '[]'); } catch { return []; }
   });
 
-  const addTurnoMutation = useMutation({
-    mutationFn: async (nome: string) => {
-      const { error } = await supabase.from('turnos').insert({ user_id: user!.id, nome });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['turnos'] });
-      toast({ title: 'Turno adicionado!' });
-    },
-    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
-  });
+  const handleAddTurno = (nome: string) => {
+    const novas = [...turnos, { id: Date.now().toString() + Math.random(), nome }];
+    setTurnos(novas);
+    localStorage.setItem('vanzeiro_turnos', JSON.stringify(novas));
+    toast({ title: 'Turno adicionado!' });
+  };
 
-  const deleteTurnoMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('turnos').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['turnos'] }),
-    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
-  });
+  const handleDeleteTurno = (id: string) => {
+    const novas = turnos.filter(t => t.id !== id);
+    setTurnos(novas);
+    localStorage.setItem('vanzeiro_turnos', JSON.stringify(novas));
+  };
 
   const manageSubscriptionMutation = useMutation({
     mutationFn: async () => {
@@ -365,13 +339,13 @@ const Configuracoes = () => {
 
             <div className="border-t border-border pt-4">
               <ParamList
-                title="Escolas"
+                title="Escolas (Cadastros Livres)"
                 icon={School}
                 items={escolas}
-                onAdd={nome => addEscolaMutation.mutate(nome)}
-                onDelete={id => deleteEscolaMutation.mutate(id)}
+                onAdd={handleAddEscola}
+                onDelete={handleDeleteEscola}
                 placeholder="Nome da escola..."
-                isAdding={addEscolaMutation.isPending}
+                isAdding={false}
               />
             </div>
 
@@ -389,13 +363,13 @@ const Configuracoes = () => {
 
             <div className="border-t border-border pt-4">
               <ParamList
-                title="Turnos"
+                title="Turnos (Cadastros Livres)"
                 icon={Clock}
                 items={turnos}
-                onAdd={nome => addTurnoMutation.mutate(nome)}
-                onDelete={id => deleteTurnoMutation.mutate(id)}
+                onAdd={handleAddTurno}
+                onDelete={handleDeleteTurno}
                 placeholder="Ex: Manhã, Tarde, Integral..."
-                isAdding={addTurnoMutation.isPending}
+                isAdding={false}
               />
             </div>
           </Card>
