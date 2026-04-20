@@ -13,12 +13,15 @@ import {
   MessageSquare, 
   ChevronRight,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  ArrowLeft
 } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Inadimplencia = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState('devedores');
 
   const { data: records = [], isLoading } = useQuery({
@@ -95,6 +98,9 @@ const Inadimplencia = () => {
   return (
     <AppLayout>
       <div className="mb-6">
+        <Button variant="ghost" onClick={() => navigate(-1)} className="-ml-3 mb-2 h-8 px-2 text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
+        </Button>
         <h1 className="text-2xl font-bold text-foreground">Painel Financeiro</h1>
         <p className="text-sm text-muted-foreground">Visão geral de recebimentos e pendências</p>
       </div>
