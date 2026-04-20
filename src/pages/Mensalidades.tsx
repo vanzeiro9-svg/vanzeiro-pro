@@ -13,7 +13,7 @@ import { Check, MessageSquare, History, Search, X, Plus, Pencil, Trash2, Downloa
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const Mensalidades = () => {
   const { user } = useAuth();
@@ -307,7 +307,7 @@ const Mensalidades = () => {
 
       let cursorY = 55;
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: cursorY,
         theme: 'grid',
         headStyles: { fillColor: [241, 245, 249], textColor: [40, 40, 40], fontStyle: 'bold' },
@@ -328,7 +328,7 @@ const Mensalidades = () => {
       doc.setTextColor(40, 40, 40);
       doc.text('Detalhamento de Despesas', 14, cursorY + 15);
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: cursorY + 20,
         head: [['Categoria', 'Data', 'Valor']],
         body: despesasData.map((d: any) => [
@@ -354,7 +354,7 @@ const Mensalidades = () => {
       doc.setTextColor(40, 40, 40);
       doc.text('Cobranças e Mensalidades', 14, cursorY + 15);
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: cursorY + 20,
         head: [['Aluno', 'Situação', 'Valor']],
         body: mensalidadesData.map((m: any) => [
