@@ -265,9 +265,12 @@ const Mensalidades = () => {
       const fimMesR = `${mesRelatorio}-${lastDayR}`;
 
       const [mensalidadesRes, despesasRes] = await Promise.all([
-        supabase.from('mensalidades').select('*, alunos(nome)').eq('mes_referencia', mesRelatorio),
+        supabase.from('mensalidades').select('*, alunos(nome)').eq('mes_referencia', mesRelatorio).eq('user_id', user!.id),
         supabase.from('despesas').select('categoria, valor, data_despesa').gte('data_despesa', inicioMesR).lte('data_despesa', fimMesR).eq('usuario_id', user!.id)
       ]);
+
+      if (mensalidadesRes.error) throw new Error(`Mensalidades: ${mensalidadesRes.error.message}`);
+      if (despesasRes.error) throw new Error(`Despesas: ${despesasRes.error.message}`);
 
       const mensalidadesData = mensalidadesRes.data || [];
       const despesasData = despesasRes.data || [];
@@ -302,8 +305,10 @@ const Mensalidades = () => {
 
       const formatarBR = (v: number) => `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
 
+      let cursorY = 55;
+
       (doc as any).autoTable({
-        startY: 55,
+        startY: cursorY,
         theme: 'grid',
         headStyles: { fillColor: [241, 245, 249], textColor: [40, 40, 40], fontStyle: 'bold' },
         body: [
@@ -316,13 +321,15 @@ const Mensalidades = () => {
         ],
       });
 
+      cursorY = (doc as any).lastAutoTable?.finalY || cursorY + 40;
+
       // Detalhamento de Despesas
       doc.setFontSize(14);
       doc.setTextColor(40, 40, 40);
-      doc.text('Detalhamento de Despesas', 14, (doc as any).lastAutoTable.finalY + 15);
+      doc.text('Detalhamento de Despesas', 14, cursorY + 15);
 
       (doc as any).autoTable({
-        startY: (doc as any).lastAutoTable.finalY + 20,
+        startY: cursorY + 20,
         head: [['Categoria', 'Data', 'Valor']],
         body: despesasData.map((d: any) => [
           d.categoria,
@@ -335,17 +342,20 @@ const Mensalidades = () => {
         footStyles: { fillColor: [220, 38, 38], fontStyle: 'bold' }
       });
 
+      cursorY = (doc as any).lastAutoTable?.finalY || cursorY + 40;
+
       // Detalhamento de Receitas
-      if ((doc as any).lastAutoTable.finalY > 230) {
+      if (cursorY > 230) {
         doc.addPage();
+        cursorY = 10;
       }
 
       doc.setFontSize(14);
       doc.setTextColor(40, 40, 40);
-      doc.text('Cobranças e Mensalidades', 14, (doc as any).lastAutoTable.finalY > 230 ? 20 : (doc as any).lastAutoTable.finalY + 15);
+      doc.text('Cobranças e Mensalidades', 14, cursorY + 15);
 
       (doc as any).autoTable({
-        startY: (doc as any).lastAutoTable.finalY > 230 ? 25 : (doc as any).lastAutoTable.finalY + 20,
+        startY: cursorY + 20,
         head: [['Aluno', 'Situação', 'Valor']],
         body: mensalidadesData.map((m: any) => [
           m.alunos?.nome || 'Desconhecido',
@@ -362,8 +372,8 @@ const Mensalidades = () => {
       toast({ title: 'Relatório PDF gerado com sucesso!' });
       setModalRelatorioOpen(false);
 
-    } catch (err) {
-      toast({ title: 'Erro ao gerar PDF', description: 'Ocorreu um erro na extração do banco.', variant: 'destructive' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao gerar PDF', description: err.message || 'Erro inesperado na geração', variant: 'destructive' });
       console.error(err);
     } finally {
       setIsGerandoRelatorio(false);
