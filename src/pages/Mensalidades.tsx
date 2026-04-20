@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, MessageSquare, History, Search, X, Plus } from 'lucide-react';
+import { Check, MessageSquare, History, Search, X, Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const Mensalidades = () => {
   const { user } = useAuth();
@@ -23,6 +25,7 @@ const Mensalidades = () => {
     valor: '',
     data_despesa: new Date().toISOString().slice(0, 10),
   });
+  const [despesaEditando, setDespesaEditando] = useState<string | null>(null);
   const [mostrarControlePagamentos, setMostrarControlePagamentos] = useState(false);
   const [buscaNome, setBuscaNome] = useState('');
 
@@ -163,20 +166,30 @@ const Mensalidades = () => {
         throw new Error('Preencha categoria, valor e data corretamente.');
       }
 
-      const { error } = await supabase.from('despesas').insert({
-        usuario_id: user!.id,
-        descricao: despesaForm.categoria,
-        categoria: despesaForm.categoria,
-        valor,
-        data_despesa: despesaForm.data_despesa,
-        fixa: false,
-      });
+      if (despesaEditando) {
+        const { error } = await supabase.from('despesas').update({
+          descricao: despesaForm.categoria,
+          categoria: despesaForm.categoria,
+          valor,
+          data_despesa: despesaForm.data_despesa,
+        }).eq('id', despesaEditando);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('despesas').insert({
+          usuario_id: user!.id,
+          descricao: despesaForm.categoria,
+          categoria: despesaForm.categoria,
+          valor,
+          data_despesa: despesaForm.data_despesa,
+          fixa: false,
+        });
 
-      if (error) {
-        if (error.message?.includes("Could not find the table 'public.despesas'")) {
-          throw new Error('A tabela de despesas ainda não foi criada no banco. Execute as migrações do Supabase e tente novamente.');
+        if (error) {
+          if (error.message?.includes("Could not find the table 'public.despesas'")) {
+            throw new Error('A tabela de despesas ainda não foi criada no banco. Execute as migrações do Supabase e tente novamente.');
+          }
+          throw error;
         }
-        throw error;
       }
     },
     onSuccess: () => {
@@ -187,10 +200,33 @@ const Mensalidades = () => {
         valor: '',
         data_despesa: new Date().toISOString().slice(0, 10),
       });
-      toast({ title: 'Despesa registrada com sucesso!' });
+      setDespesaEditando(null);
+      toast({ title: despesaEditando ? 'Despesa atualizada!' : 'Despesa registrada com sucesso!' });
     },
     onError: (error: any) => {
       toast({ title: 'Erro ao registrar despesa', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const cancelarEdicao = () => {
+    setDespesaEditando(null);
+    setDespesaForm({
+      categoria: 'Combustivel',
+      valor: '',
+      data_despesa: new Date().toISOString().slice(0, 10),
+    });
+  };
+
+  const deleteDespesaMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('despesas').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['despesas'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      toast({ title: 'Despesa excluída!' });
+      if (despesaEditando) cancelarEdicao();
     },
   });
 
@@ -213,6 +249,100 @@ const Mensalidades = () => {
     (m.alunos?.nome || '').toLowerCase().includes(buscaNome.toLowerCase())
   );
 
+  const gerarRelatorioPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      const receitasTotal = mensalidades.reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+      const receitasPagas = mensalidades.filter((m: any) => m.status === 'pago').reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+      const receitasPendentes = mensalidades.filter((m: any) => m.status === 'pendente').reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+      const inadimplencia = mensalidades.filter((m: any) => m.status === 'atrasado').reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+      
+      const lucro = receitasPagas - totalDespesasMes;
+      const mesNome = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+
+      // Cabeçalho
+      doc.setFontSize(22);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Relatório Financeiro', 14, 22);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Período analisado: ${mesNome}`, 14, 30);
+      doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 14, 36);
+
+      // Bloco Resumo
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Resumo do Caixa Geral', 14, 50);
+
+      const formatarBR = (v: number) => `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
+
+      autoTable(doc, {
+        startY: 55,
+        theme: 'grid',
+        headStyles: { fillColor: [241, 245, 249], textColor: [40, 40, 40], fontStyle: 'bold' },
+        body: [
+          ['(+) Receitas Pagas (Disponível em Caixa)', formatarBR(receitasPagas)],
+          ['(-) Despesas Realizadas', formatarBR(totalDespesasMes)],
+          ['(=) Lucro Líquido Parcial', formatarBR(lucro)],
+          ['--------------------------------------', ''],
+          ['Valores A Receber (No Prazo)', formatarBR(receitasPendentes)],
+          ['Inadimplência (Atrasos)', formatarBR(inadimplencia)]
+        ],
+      });
+
+      // Detalhamento de Despesas
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Detalhamento de Despesas', 14, (doc as any).lastAutoTable.finalY + 15);
+
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 20,
+        head: [['Categoria', 'Data', 'Valor']],
+        body: despesas.map((d: any) => [
+          d.categoria,
+          new Date(`${d.data_despesa}T00:00:00`).toLocaleDateString('pt-BR'),
+          formatarBR(Number(d.valor))
+        ]),
+        foot: [['Total de Despesas', '', formatarBR(totalDespesasMes)]],
+        theme: 'striped',
+        headStyles: { fillColor: [220, 38, 38] }, // vermelho escuro
+        footStyles: { fillColor: [220, 38, 38], fontStyle: 'bold' }
+      });
+
+      // Detalhamento de Receitas
+      if ((doc as any).lastAutoTable.finalY > 230) {
+        doc.addPage();
+      }
+
+      doc.setFontSize(14);
+      doc.setTextColor(40, 40, 40);
+      doc.text('Cobranças e Mensalidades', 14, (doc as any).lastAutoTable.finalY > 230 ? 20 : (doc as any).lastAutoTable.finalY + 15);
+
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY > 230 ? 25 : (doc as any).lastAutoTable.finalY + 20,
+        head: [['Aluno', 'Situação', 'Valor']],
+        body: mensalidades.map((m: any) => [
+          m.alunos?.nome || 'Desconhecido',
+          m.status === 'pago' ? 'Pago' : m.status === 'atrasado' ? 'Atrasado' : 'Pendente',
+          formatarBR(Number(m.valor))
+        ]),
+        foot: [['Total Projetado', '', formatarBR(receitasTotal)]],
+        theme: 'striped',
+        headStyles: { fillColor: [22, 163, 74] }, // verde escuro
+        footStyles: { fillColor: [22, 163, 74], fontStyle: 'bold' }
+      });
+
+      doc.save(`relatorio-financeiro-${mesFiltro}.pdf`);
+      toast({ title: 'Relatório PDF gerado com sucesso!' });
+
+    } catch (err) {
+      toast({ title: 'Erro ao gerar PDF', description: 'Ocorreu um erro na montagem do documento.', variant: 'destructive' });
+      console.error(err);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="flex items-center justify-between mb-4">
@@ -230,15 +360,24 @@ const Mensalidades = () => {
             </Link>
           </div>
         </div>
-        <Button onClick={() => gerarMutation.mutate()} disabled={gerarMutation.isPending} className="touch-target">
-          {gerarMutation.isPending ? 'Gerando...' : 'Gerar cobranças'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={gerarRelatorioPDF} variant="outline" className="touch-target bg-transparent text-primary border-primary hover:bg-primary/10 gap-1.5 font-bold h-9 sm:h-10 text-xs sm:text-sm px-3 shadow-sm">
+            <Download className="w-3.5 h-3.5" /> PDF
+          </Button>
+          <Button onClick={() => gerarMutation.mutate()} disabled={gerarMutation.isPending} className="touch-target font-bold h-9 sm:h-10 text-xs sm:text-sm px-3 shadow-md">
+            {gerarMutation.isPending ? 'Gerando...' : 'Gerar cobranças'}
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4 mt-2 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-foreground">Registro de Despesas</h2>
-          <span className="text-xs font-semibold text-muted-foreground capitalize">Período: {mesLabel}</span>
+          <h2 className="text-base font-bold text-foreground">
+            {despesaEditando ? 'Editar Despesa' : 'Registro de Despesas'}
+          </h2>
+          <span className="text-xs font-semibold text-muted-foreground capitalize">
+            {despesaEditando ? 'Modo edição' : `Período: ${mesLabel}`}
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -329,13 +468,24 @@ const Mensalidades = () => {
           </div>
         </div>
 
-        <Button
-          onClick={() => addDespesaMutation.mutate()}
-          disabled={addDespesaMutation.isPending}
-          className="w-full md:w-auto touch-target"
-        >
-          {addDespesaMutation.isPending ? 'Salvando despesa...' : 'Salvar despesa'}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => addDespesaMutation.mutate()}
+            disabled={addDespesaMutation.isPending}
+            className={`w-full md:w-auto touch-target ${despesaEditando ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
+          >
+            {addDespesaMutation.isPending ? 'Salvando...' : (despesaEditando ? 'Atualizar despesa' : 'Salvar despesa')}
+          </Button>
+          {despesaEditando && (
+            <Button
+              variant="outline"
+              onClick={cancelarEdicao}
+              className="touch-target"
+            >
+              Cancelar
+            </Button>
+          )}
+        </div>
 
         <div className="border-t pt-3">
           <p className="text-sm font-semibold text-foreground">
@@ -346,14 +496,50 @@ const Mensalidades = () => {
           ) : (
             <div className="mt-3 space-y-2">
               {despesas.map((d: any) => (
-                <div key={d.id} className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2">
+                <div key={d.id} className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2 animate-fade-in">
                   <div>
                     <p className="text-sm font-medium text-foreground">{d.categoria}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(`${d.data_despesa}T00:00:00`).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <p className="text-sm font-bold text-foreground">R$ {Number(d.valor).toFixed(2)}</p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm font-bold text-foreground">R$ {Number(d.valor).toFixed(2)}</p>
+                    <div className="flex gap-1.5">
+                      <button 
+                        onClick={() => {
+                          setDespesaEditando(d.id);
+                          setDespesaForm({
+                            categoria: d.categoria,
+                            valor: d.valor.toString(),
+                            data_despesa: d.data_despesa
+                          });
+                          if (!todasCategorias.includes(d.categoria)) {
+                            // Adiciona a categoria nova à lista de customizadas para não quebrar o Select
+                            const novas = [...categoriasCustom, d.categoria];
+                            setCategoriasCustom(novas);
+                            localStorage.setItem('despesas_categorias', JSON.stringify(novas));
+                          }
+                        }}
+                        className="p-1.5 text-muted-foreground hover:text-amber-500 transition-colors bg-white rounded-md shadow-sm border border-slate-200"
+                        title="Editar despesa"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (window.confirm('Tem certeza que deseja excluir esta despesa?')) {
+                            deleteDespesaMutation.mutate(d.id);
+                          }
+                        }}
+                        disabled={deleteDespesaMutation.isPending}
+                        className="p-1.5 text-muted-foreground hover:text-destructive transition-colors bg-white rounded-md shadow-sm border border-slate-200"
+                        title="Excluir despesa"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
