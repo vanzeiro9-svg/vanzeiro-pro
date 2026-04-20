@@ -190,7 +190,9 @@ const Alunos = () => {
                 <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
                   <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                   <SelectContent>
-                    {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
+                    <SelectItem value="manha">Manhã</SelectItem>
+                    <SelectItem value="tarde">Tarde</SelectItem>
+                    <SelectItem value="integral">Integral</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -304,7 +306,9 @@ const Alunos = () => {
                   <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
                     <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                     <SelectContent>
-                      {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
+                      <SelectItem value="manha">Manhã</SelectItem>
+                      <SelectItem value="tarde">Tarde</SelectItem>
+                      <SelectItem value="integral">Integral</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
