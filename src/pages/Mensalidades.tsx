@@ -368,7 +368,19 @@ const Mensalidades = () => {
         footStyles: { fillColor: [22, 163, 74], fontStyle: 'bold' }
       });
 
-      doc.save(`relatorio-financeiro-${mesRelatorio}.pdf`);
+      const nomeMesLimpo = new Date(mesRelatorio + '-02').toLocaleDateString('pt-BR', { month: 'long' });
+      const nomeArquivo = `relatorio-${nomeMesLimpo}${yearR}.pdf`;
+      
+      const pdfBlob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = nomeArquivo.toLowerCase();
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+
       toast({ title: 'Relatório PDF gerado com sucesso!' });
       setModalRelatorioOpen(false);
 
