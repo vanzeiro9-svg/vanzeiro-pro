@@ -13,7 +13,7 @@ import { Check, MessageSquare, History, Search, X, Plus, Pencil, Trash2, Downloa
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 
 const Mensalidades = () => {
   const { user } = useAuth();
@@ -302,7 +302,7 @@ const Mensalidades = () => {
 
       const formatarBR = (v: number) => `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
 
-      autoTable(doc, {
+      (doc as any).autoTable({
         startY: 55,
         theme: 'grid',
         headStyles: { fillColor: [241, 245, 249], textColor: [40, 40, 40], fontStyle: 'bold' },
@@ -321,7 +321,7 @@ const Mensalidades = () => {
       doc.setTextColor(40, 40, 40);
       doc.text('Detalhamento de Despesas', 14, (doc as any).lastAutoTable.finalY + 15);
 
-      autoTable(doc, {
+      (doc as any).autoTable({
         startY: (doc as any).lastAutoTable.finalY + 20,
         head: [['Categoria', 'Data', 'Valor']],
         body: despesasData.map((d: any) => [
@@ -344,7 +344,7 @@ const Mensalidades = () => {
       doc.setTextColor(40, 40, 40);
       doc.text('Cobranças e Mensalidades', 14, (doc as any).lastAutoTable.finalY > 230 ? 20 : (doc as any).lastAutoTable.finalY + 15);
 
-      autoTable(doc, {
+      (doc as any).autoTable({
         startY: (doc as any).lastAutoTable.finalY > 230 ? 25 : (doc as any).lastAutoTable.finalY + 20,
         head: [['Aluno', 'Situação', 'Valor']],
         body: mensalidadesData.map((m: any) => [
