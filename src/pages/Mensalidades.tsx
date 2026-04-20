@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Check, MessageSquare, History, Search, X, Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +21,11 @@ const Mensalidades = () => {
   const queryClient = useQueryClient();
 
   const [mesFiltro, setMesFiltro] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  
+  const [modalRelatorioOpen, setModalRelatorioOpen] = useState(false);
+  const [mesRelatorio, setMesRelatorio] = useState(new Date().toISOString().slice(0, 7));
+  const [isGerandoRelatorio, setIsGerandoRelatorio] = useState(false);
+
   const [despesaForm, setDespesaForm] = useState({
     categoria: 'Combustivel',
     valor: '',
@@ -249,17 +255,35 @@ const Mensalidades = () => {
     (m.alunos?.nome || '').toLowerCase().includes(buscaNome.toLowerCase())
   );
 
-  const gerarRelatorioPDF = () => {
+  const gerarRelatorioPDF = async () => {
+    setIsGerandoRelatorio(true);
     try {
+      const inicioMesR = `${mesRelatorio}-01`;
+      const yearR = parseInt(mesRelatorio.split('-')[0]);
+      const monthR = parseInt(mesRelatorio.split('-')[1]);
+      const lastDayR = new Date(yearR, monthR, 0).getDate();
+      const fimMesR = `${mesRelatorio}-${lastDayR}`;
+
+      const [mensalidadesRes, despesasRes] = await Promise.all([
+        supabase.from('mensalidades').select('*, alunos(nome)').eq('mes_referencia', mesRelatorio),
+        supabase.from('despesas').select('categoria, valor, data_despesa').gte('data_despesa', inicioMesR).lte('data_despesa', fimMesR).eq('usuario_id', user!.id)
+      ]);
+
+      const mensalidadesData = mensalidadesRes.data || [];
+      const despesasData = despesasRes.data || [];
+
       const doc = new jsPDF();
       
-      const receitasTotal = mensalidades.reduce((acc: number, m: any) => acc + Number(m.valor), 0);
-      const receitasPagas = mensalidades.filter((m: any) => m.status === 'pago').reduce((acc: number, m: any) => acc + Number(m.valor), 0);
-      const receitasPendentes = mensalidades.filter((m: any) => m.status === 'pendente').reduce((acc: number, m: any) => acc + Number(m.valor), 0);
-      const inadimplencia = mensalidades.filter((m: any) => m.status === 'atrasado').reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+      const receitasTotal = mensalidadesData.reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+      const receitasPagas = mensalidadesData.filter((m: any) => m.status === 'pago').reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+      const receitasPendentes = mensalidadesData.filter((m: any) => m.status === 'pendente').reduce((acc: number, m: any) => acc + Number(m.valor), 0);
+      const inadimplencia = mensalidadesData.filter((m: any) => m.status === 'atrasado').reduce((acc: number, m: any) => acc + Number(m.valor), 0);
       
-      const lucro = receitasPagas - totalDespesasMes;
-      const mesNome = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+      const totalDespesasR = despesasData.reduce((acc: number, item: any) => acc + Number(item.valor), 0);
+      const lucro = receitasPagas - totalDespesasR;
+
+      const mesLabelR = new Date(mesRelatorio + '-02').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const mesNome = mesLabelR.charAt(0).toUpperCase() + mesLabelR.slice(1);
 
       // Cabeçalho
       doc.setFontSize(22);
@@ -284,7 +308,7 @@ const Mensalidades = () => {
         headStyles: { fillColor: [241, 245, 249], textColor: [40, 40, 40], fontStyle: 'bold' },
         body: [
           ['(+) Receitas Pagas (Disponível em Caixa)', formatarBR(receitasPagas)],
-          ['(-) Despesas Realizadas', formatarBR(totalDespesasMes)],
+          ['(-) Despesas Realizadas', formatarBR(totalDespesasR)],
           ['(=) Lucro Líquido Parcial', formatarBR(lucro)],
           ['--------------------------------------', ''],
           ['Valores A Receber (No Prazo)', formatarBR(receitasPendentes)],
@@ -300,12 +324,12 @@ const Mensalidades = () => {
       autoTable(doc, {
         startY: (doc as any).lastAutoTable.finalY + 20,
         head: [['Categoria', 'Data', 'Valor']],
-        body: despesas.map((d: any) => [
+        body: despesasData.map((d: any) => [
           d.categoria,
           new Date(`${d.data_despesa}T00:00:00`).toLocaleDateString('pt-BR'),
           formatarBR(Number(d.valor))
         ]),
-        foot: [['Total de Despesas', '', formatarBR(totalDespesasMes)]],
+        foot: [['Total de Despesas', '', formatarBR(totalDespesasR)]],
         theme: 'striped',
         headStyles: { fillColor: [220, 38, 38] }, // vermelho escuro
         footStyles: { fillColor: [220, 38, 38], fontStyle: 'bold' }
@@ -323,7 +347,7 @@ const Mensalidades = () => {
       autoTable(doc, {
         startY: (doc as any).lastAutoTable.finalY > 230 ? 25 : (doc as any).lastAutoTable.finalY + 20,
         head: [['Aluno', 'Situação', 'Valor']],
-        body: mensalidades.map((m: any) => [
+        body: mensalidadesData.map((m: any) => [
           m.alunos?.nome || 'Desconhecido',
           m.status === 'pago' ? 'Pago' : m.status === 'atrasado' ? 'Atrasado' : 'Pendente',
           formatarBR(Number(m.valor))
@@ -334,12 +358,15 @@ const Mensalidades = () => {
         footStyles: { fillColor: [22, 163, 74], fontStyle: 'bold' }
       });
 
-      doc.save(`relatorio-financeiro-${mesFiltro}.pdf`);
+      doc.save(`relatorio-financeiro-${mesRelatorio}.pdf`);
       toast({ title: 'Relatório PDF gerado com sucesso!' });
+      setModalRelatorioOpen(false);
 
     } catch (err) {
-      toast({ title: 'Erro ao gerar PDF', description: 'Ocorreu um erro na montagem do documento.', variant: 'destructive' });
+      toast({ title: 'Erro ao gerar PDF', description: 'Ocorreu um erro na extração do banco.', variant: 'destructive' });
       console.error(err);
+    } finally {
+      setIsGerandoRelatorio(false);
     }
   };
 
@@ -361,9 +388,28 @@ const Mensalidades = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={gerarRelatorioPDF} variant="outline" className="touch-target bg-transparent text-primary border-primary hover:bg-primary/10 gap-1.5 font-bold h-9 sm:h-10 text-xs sm:text-sm px-3 shadow-sm">
-            <Download className="w-3.5 h-3.5" /> PDF
-          </Button>
+          <Dialog open={modalRelatorioOpen} onOpenChange={setModalRelatorioOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="touch-target bg-transparent text-primary border-primary hover:bg-primary/10 gap-1.5 font-bold h-9 sm:h-10 text-xs sm:text-sm px-3 shadow-sm">
+                <Download className="w-3.5 h-3.5" /> Relatório Financeiro
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[calc(100%-32px)] sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Mês do Relatório</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Selecione de qual mês quer o resumo do fluxo de caixa:</Label>
+                  <Input type="month" value={mesRelatorio} onChange={e => setMesRelatorio(e.target.value)} className="w-full" />
+                </div>
+                <Button onClick={gerarRelatorioPDF} disabled={isGerandoRelatorio} className="w-full font-bold">
+                  {isGerandoRelatorio ? 'Gerando dados e montando PDF...' : 'Gerar e baixar PDF'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button onClick={() => gerarMutation.mutate()} disabled={gerarMutation.isPending} className="touch-target font-bold h-9 sm:h-10 text-xs sm:text-sm px-3 shadow-md">
             {gerarMutation.isPending ? 'Gerando...' : 'Gerar cobranças'}
           </Button>
