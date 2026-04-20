@@ -22,11 +22,15 @@ const Dashboard = () => {
   const { data: stats, error: statsError, isLoading: isStatsLoading } = useQuery({
     queryKey: ['dashboard-stats', mesCorrente],
     queryFn: async () => {
+      const year = parseInt(mesCorrente.split('-')[0]);
+      const month = parseInt(mesCorrente.split('-')[1]);
+      const lastDay = new Date(year, month, 0).getDate();
+
       const [alunosRes, mensalidadesRes, docsRes, despesasRes] = await Promise.all([
         supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo').eq('user_id', user!.id),
         supabase.from('mensalidades').select('valor, status').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
         supabase.from('documentos').select('*').eq('user_id', user!.id),
-        supabase.from('despesas').select('valor').gte('data_despesa', `${mesCorrente}-01`).lte('data_despesa', `${mesCorrente}-31`).eq('usuario_id', user!.id),
+        supabase.from('despesas').select('valor').gte('data_despesa', `${mesCorrente}-01`).lte('data_despesa', `${mesCorrente}-${lastDay}`).eq('usuario_id', user!.id),
       ]);
 
       const errors = [
