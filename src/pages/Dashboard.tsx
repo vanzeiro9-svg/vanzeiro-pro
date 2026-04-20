@@ -26,7 +26,7 @@ const Dashboard = () => {
         supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo').eq('user_id', user!.id),
         supabase.from('mensalidades').select('valor, status').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
         supabase.from('documentos').select('*').eq('user_id', user!.id),
-        supabase.from('despesas').select('valor').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
+        supabase.from('despesas').select('valor').gte('data_despesa', `${mesCorrente}-01`).lte('data_despesa', `${mesCorrente}-31`).eq('usuario_id', user!.id),
       ]);
 
       const errors = [
