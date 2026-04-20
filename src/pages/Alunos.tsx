@@ -66,9 +66,14 @@ const Alunos = () => {
     try { return JSON.parse(localStorage.getItem('vanzeiro_turnos') || '[]'); } catch { return []; }
   });
 
+  const getTurnoForDB = (t: string) => {
+    const limpo = (t || '').toLowerCase();
+    return ['manha', 'tarde', 'integral'].includes(limpo) ? limpo : 'manha';
+  };
+
   const addMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('alunos').insert({
+      const { data, error } = await supabase.from('alunos').insert({
         user_id: user!.id,
         nome: form.nome,
         responsavel_nome: form.responsavel_nome,
@@ -76,12 +81,17 @@ const Alunos = () => {
         endereco_embarque: form.endereco_embarque,
         endereco_desembarque: form.endereco_desembarque,
         escola: form.escola,
-        turno: form.turno,
+        turno: getTurnoForDB(form.turno),
         valor_mensalidade: parseFloat(form.valor_mensalidade) || 0,
         status: form.status,
         rota_id: form.rota_id || null,
-      });
+      }).select('id').single();
+      
       if (error) throw error;
+
+      if (data) {
+        localStorage.setItem(`vanzeiro_custom_turno_${data.id}`, form.turno);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alunos'] });
@@ -104,12 +114,15 @@ const Alunos = () => {
         endereco_embarque: form.endereco_embarque,
         endereco_desembarque: form.endereco_desembarque,
         escola: form.escola,
-        turno: form.turno,
+        turno: getTurnoForDB(form.turno),
         valor_mensalidade: parseFloat(form.valor_mensalidade) || 0,
         status: form.status,
         rota_id: form.rota_id || null,
       }).eq('id', id);
+      
       if (error) throw error;
+
+      localStorage.setItem(`vanzeiro_custom_turno_${id}`, form.turno);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alunos'] });
@@ -146,7 +159,7 @@ const Alunos = () => {
       endereco_embarque: aluno.endereco_embarque || '',
       endereco_desembarque: aluno.endereco_desembarque || '',
       escola: aluno.escola || '',
-      turno: aluno.turno || 'manha',
+      turno: localStorage.getItem(`vanzeiro_custom_turno_${aluno.id}`) || aluno.turno || 'manha',
       valor_mensalidade: aluno.valor_mensalidade?.toString() || '0',
       status: aluno.status || 'ativo',
       rota_id: aluno.rota_id || '',
@@ -190,9 +203,7 @@ const Alunos = () => {
                 <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
                   <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="manha">Manhã</SelectItem>
-                    <SelectItem value="tarde">Tarde</SelectItem>
-                    <SelectItem value="integral">Integral</SelectItem>
+                    {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -252,7 +263,7 @@ const Alunos = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-bold text-foreground">{aluno.nome}</h3>
-                  <p className="text-sm text-muted-foreground">{aluno.escola} • {aluno.turno}</p>
+                  <p className="text-sm text-muted-foreground">{aluno.escola} • {localStorage.getItem(`vanzeiro_custom_turno_${aluno.id}`) || aluno.turno}</p>
                   <p className="text-sm text-muted-foreground">{aluno.responsavel_nome}</p>
                   {aluno.rotas?.nome && <p className="text-xs text-primary font-semibold mt-1">🚐 {aluno.rotas.nome}</p>}
                 </div>
@@ -306,9 +317,7 @@ const Alunos = () => {
                   <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
                     <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="manha">Manhã</SelectItem>
-                      <SelectItem value="tarde">Tarde</SelectItem>
-                      <SelectItem value="integral">Integral</SelectItem>
+                      {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>

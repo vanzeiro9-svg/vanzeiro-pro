@@ -189,6 +189,24 @@ const Configuracoes = () => {
     onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
   });
 
+  // --- Turnos (LocalStorage) ---
+  const [turnos, setTurnos] = useState<{ id: string; nome: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('vanzeiro_turnos') || '[]'); } catch { return []; }
+  });
+
+  const handleAddTurno = (nome: string) => {
+    const novas = [...turnos, { id: Date.now().toString() + Math.random(), nome }];
+    setTurnos(novas);
+    localStorage.setItem('vanzeiro_turnos', JSON.stringify(novas));
+    toast({ title: 'Turno adicionado!' });
+  };
+
+  const handleDeleteTurno = (id: string) => {
+    const novas = turnos.filter(t => t.id !== id);
+    setTurnos(novas);
+    localStorage.setItem('vanzeiro_turnos', JSON.stringify(novas));
+  };
+
 
 
   const manageSubscriptionMutation = useMutation({
@@ -342,6 +360,18 @@ const Configuracoes = () => {
                 onDelete={id => deleteRotaMutation.mutate(id)}
                 placeholder="Nome da rota..."
                 isAdding={addRotaMutation.isPending}
+              />
+            </div>
+
+            <div className="border-t border-border pt-4">
+              <ParamList
+                title="Turnos (Cadastros Livres)"
+                icon={Clock}
+                items={turnos}
+                onAdd={handleAddTurno}
+                onDelete={handleDeleteTurno}
+                placeholder="Ex: Manhã, Tarde, Integral, Noite..."
+                isAdding={false}
               />
             </div>
           </Card>
