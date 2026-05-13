@@ -6,10 +6,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, nome: string, whatsapp: string) => Promise<void>;
+  signUp: (email: string, password: string, nome: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  requestPasswordReset: (email: string) => Promise<void>;
   profile: any;
   refreshProfile: () => Promise<void>;
 }
@@ -22,24 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const query = supabase.from('profiles').select('*').eq('user_id', userId).single();
-    const { data, error } = await Promise.race([
-      query,
-      new Promise<{ data: null; error: { message: string } }>((resolve) =>
-        setTimeout(() => resolve({ data: null, error: { message: 'PROFILE_FETCH_TIMEOUT' } }), 20_000),
-      ),
-    ]);
-
-    if (error) {
-      if (error.message === 'PROFILE_FETCH_TIMEOUT') {
-        console.warn('Timeout ao carregar perfil; tente recarregar a página.');
-      }
-      throw error;
-    }
-    setProfile(data);
-  };
-
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -49,7 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(currentUser);
         
         if (currentUser) {
-          await fetchProfile(currentUser.id);
+          const { data } = await supabase.from('profiles').select('*').eq('user_id', currentUser.id).single();
+          if (data) setProfile(data);
         }
       } catch (error) {
         console.error('Erro ao carregar dados iniciais:', error);
@@ -65,30 +47,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }, 5000);
 
-    // Nunca use await em chamadas supabase dentro deste callback — causa deadlock com updateUser/setSession etc.
-    // Ver: https://supabase.com/docs/reference/javascript/auth-onauthstatechange
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       clearTimeout(timeout);
-      setLoading(true);
       const currentUser = session?.user ?? null;
       setSession(session);
       setUser(currentUser);
-
+      
       if (currentUser) {
-        void (async () => {
-          try {
-            await fetchProfile(currentUser.id);
-          } catch (error) {
-            console.error('Erro ao buscar perfil:', error);
-            setProfile(null);
-          } finally {
-            setLoading(false);
-          }
-        })();
+        supabase.from('profiles')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .single()
+          .then(({ data }) => {
+            if (data) setProfile(data);
+          });
       } else {
         setProfile(null);
-        setLoading(false);
       }
+      
+      setLoading(false);
     });
 
     return () => {
@@ -97,11 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, nome: string, whatsapp: string) => {
+  const signUp = async (email: string, password: string, nome: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { nome, whatsapp } },
+      options: { data: { nome } },
     });
     if (error) throw error;
   };
@@ -111,66 +88,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const requestPasswordReset = async (email: string) => {
-    const redirectTo = `${window.location.origin}/auth/redefinir-senha`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
-    if (error) throw error;
-  };
-
   const signOut = async () => {
-    setLoading(true);
-    try {
-      // Primeiro tenta encerrar a sessão no cliente (mais confiável para "deslogar" na hora).
-      // Se a lib não suportar scope/local, ela simplesmente ignora o objeto.
-      await supabase.auth.signOut({ scope: 'local' } as any);
-
-      // Em seguida tenta encerrar globalmente (revoga refresh token no servidor).
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-    } catch (error) {
-      // Fallback: mesmo que a chamada falhe, garantimos logout local limpando storage e estado.
-      console.warn('Falha ao deslogar via Supabase, limpando sessão local.', error);
-    } finally {
-      try {
-        // Remove tokens persistidos do Supabase (padrão: sb-<project-ref>-auth-token)
-        for (let i = localStorage.length - 1; i >= 0; i -= 1) {
-          const key = localStorage.key(i);
-          if (!key) continue;
-          if (key.startsWith('sb-') && key.includes('-auth-token')) {
-            localStorage.removeItem(key);
-          }
-        }
-      } catch {
-        // ignore
-      }
-
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      setLoading(false);
-    }
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchProfile(user.id);
+      const { data } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
+      setProfile(data);
     }
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        loading,
-        signUp,
-        signIn,
-        signOut,
-        requestPasswordReset,
-        profile,
-        refreshProfile,
-      }}
-    >
+    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, profile, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

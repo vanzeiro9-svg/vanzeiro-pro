@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Phone, Trash2, Search, X } from 'lucide-react';
+import { Plus, Phone, Trash2, Edit, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -31,14 +31,8 @@ const Alunos = () => {
 
   const { data: alunos = [], isLoading } = useQuery({
     queryKey: ['alunos'],
-    enabled: !!user?.id,
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('alunos')
-        .select('*, rotas(nome)')
-        .eq('user_id', user.id)
-        .order('nome');
+      const { data, error } = await supabase.from('alunos').select('*, rotas(nome)').order('nome');
       if (error) throw error;
       return data;
     },
@@ -47,33 +41,33 @@ const Alunos = () => {
   const { data: rotas = [] } = useQuery({
     queryKey: ['rotas'],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('rotas')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('nome');
+      const { data, error } = await supabase.from('rotas').select('*').order('nome');
       if (error) throw error;
       return data;
     },
   });
 
-  const [escolas, setEscolas] = useState<{ id: string; nome: string }[]>(() => {
-    try { return JSON.parse(localStorage.getItem('vanzeiro_escolas') || '[]'); } catch { return []; }
+  const { data: escolas = [] } = useQuery({
+    queryKey: ['escolas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('escolas').select('*').order('nome');
+      if (error) throw error;
+      return data as { id: string; nome: string }[];
+    },
   });
 
-  const [turnos, setTurnos] = useState<{ id: string; nome: string }[]>(() => {
-    try { return JSON.parse(localStorage.getItem('vanzeiro_turnos') || '[]'); } catch { return []; }
+  const { data: turnos = [] } = useQuery({
+    queryKey: ['turnos'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('turnos').select('*').order('nome');
+      if (error) throw error;
+      return data as { id: string; nome: string }[];
+    },
   });
-
-  const getTurnoForDB = (t: string) => {
-    const limpo = (t || '').toLowerCase();
-    return ['manha', 'tarde', 'integral'].includes(limpo) ? limpo : 'manha';
-  };
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.from('alunos').insert({
+      const { error } = await supabase.from('alunos').insert({
         user_id: user!.id,
         nome: form.nome,
         responsavel_nome: form.responsavel_nome,
@@ -81,17 +75,12 @@ const Alunos = () => {
         endereco_embarque: form.endereco_embarque,
         endereco_desembarque: form.endereco_desembarque,
         escola: form.escola,
-        turno: getTurnoForDB(form.turno),
+        turno: form.turno,
         valor_mensalidade: parseFloat(form.valor_mensalidade) || 0,
         status: form.status,
         rota_id: form.rota_id || null,
-      }).select('id').single();
-      
+      });
       if (error) throw error;
-
-      if (data) {
-        localStorage.setItem(`vanzeiro_custom_turno_${data.id}`, form.turno);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alunos'] });
@@ -114,15 +103,12 @@ const Alunos = () => {
         endereco_embarque: form.endereco_embarque,
         endereco_desembarque: form.endereco_desembarque,
         escola: form.escola,
-        turno: getTurnoForDB(form.turno),
+        turno: form.turno,
         valor_mensalidade: parseFloat(form.valor_mensalidade) || 0,
         status: form.status,
         rota_id: form.rota_id || null,
       }).eq('id', id);
-      
       if (error) throw error;
-
-      localStorage.setItem(`vanzeiro_custom_turno_${id}`, form.turno);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alunos'] });
@@ -153,15 +139,15 @@ const Alunos = () => {
   const handleEdit = (aluno: any) => {
     setSelectedAluno(aluno);
     setForm({
-      nome: aluno.nome || '',
-      responsavel_nome: aluno.responsavel_nome || '',
-      responsavel_whatsapp: aluno.responsavel_whatsapp || '',
+      nome: aluno.nome,
+      responsavel_nome: aluno.responsavel_nome,
+      responsavel_whatsapp: aluno.responsavel_whatsapp,
       endereco_embarque: aluno.endereco_embarque || '',
       endereco_desembarque: aluno.endereco_desembarque || '',
       escola: aluno.escola || '',
-      turno: localStorage.getItem(`vanzeiro_custom_turno_${aluno.id}`) || aluno.turno || 'manha',
-      valor_mensalidade: aluno.valor_mensalidade?.toString() || '0',
-      status: aluno.status || 'ativo',
+      turno: aluno.turno,
+      valor_mensalidade: aluno.valor_mensalidade.toString(),
+      status: aluno.status,
       rota_id: aluno.rota_id || '',
     });
     setEditOpen(true);
@@ -196,6 +182,7 @@ const Alunos = () => {
                   <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione a escola" /></SelectTrigger>
                   <SelectContent>
                     {escolas.map((e: any) => <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>)}
+                    {escolas.length === 0 && <SelectItem value="" disabled>Cadastre escolas em Ajustes</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -204,6 +191,7 @@ const Alunos = () => {
                   <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                   <SelectContent>
                     {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
+                    {turnos.length === 0 && <SelectItem value="" disabled>Cadastre turnos em Ajustes</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -226,6 +214,7 @@ const Alunos = () => {
         </Dialog>
       </div>
 
+      {/* Campo de Pesquisa */}
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input
@@ -236,7 +225,10 @@ const Alunos = () => {
           className="w-full h-11 pl-9 pr-9 rounded-xl border border-border bg-muted/40 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
         />
         {busca && (
-          <button onClick={() => setBusca('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+          <button
+            onClick={() => setBusca('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
             <X className="w-4 h-4" />
           </button>
         )}
@@ -248,6 +240,11 @@ const Alunos = () => {
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">Nenhum aluno cadastrado ainda.</p>
           <p className="text-sm text-muted-foreground mt-1">Clique em "Novo" para começar!</p>
+        </Card>
+      ) : alunosFiltrados.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">Nenhum aluno encontrado para "{busca}".</p>
+          <button onClick={() => setBusca('')} className="text-sm text-primary font-semibold mt-2 hover:underline">Limpar pesquisa</button>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -263,7 +260,7 @@ const Alunos = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-bold text-foreground">{aluno.nome}</h3>
-                  <p className="text-sm text-muted-foreground">{aluno.escola} • {localStorage.getItem(`vanzeiro_custom_turno_${aluno.id}`) || aluno.turno}</p>
+                  <p className="text-sm text-muted-foreground">{aluno.escola} • {aluno.turno}</p>
                   <p className="text-sm text-muted-foreground">{aluno.responsavel_nome}</p>
                   {aluno.rotas?.nome && <p className="text-xs text-primary font-semibold mt-1">🚐 {aluno.rotas.nome}</p>}
                 </div>
@@ -277,13 +274,12 @@ const Alunos = () => {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      const fone = (aluno.responsavel_whatsapp || '').replace(/\D/g, '');
-                      window.open(`https://wa.me/55${fone}`, '_blank');
+                      window.open(`https://wa.me/55${aluno.responsavel_whatsapp.replace(/\D/g, '')}`, '_blank');
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 mt-1 hover:bg-success/10 active:bg-success/20 rounded-full transition-colors text-success bg-success/5 border border-success/20"
+                    className="p-2 hover:bg-success/10 active:bg-success/20 rounded-full transition-colors text-success"
+                    aria-label="Ligar via WhatsApp"
                   >
-                    <Phone className="w-3.5 h-3.5" />
-                    <span className="text-[11px] font-extrabold uppercase tracking-wide">Enviar msg</span>
+                    <Phone className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -292,86 +288,90 @@ const Alunos = () => {
         </div>
       )}
 
+      {/* Modal de Edição/Ficha */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Ficha do Aluno</DialogTitle>
           </DialogHeader>
-          {selectedAluno && (
-            <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(selectedAluno.id); }} className="space-y-4">
-              <div><Label>Nome do aluno</Label><Input value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} required className="touch-target" /></div>
-              <div><Label>Nome do responsável</Label><Input value={form.responsavel_nome} onChange={e => setForm({...form, responsavel_nome: e.target.value})} required className="touch-target" /></div>
-              <div><Label>WhatsApp do responsável</Label><Input value={form.responsavel_whatsapp} onChange={e => setForm({...form, responsavel_whatsapp: e.target.value})} placeholder="(11) 99999-9999" required className="touch-target" /></div>
-              
-              <div><Label>Escola</Label>
-                <Select value={form.escola} onValueChange={v => setForm({...form, escola: v})}>
-                  <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione a escola" /></SelectTrigger>
+          <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate(selectedAluno.id); }} className="space-y-3">
+            <div><Label>Nome do aluno</Label><Input value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} required className="touch-target" /></div>
+            <div><Label>Nome do responsável</Label><Input value={form.responsavel_nome} onChange={e => setForm({...form, responsavel_nome: e.target.value})} required className="touch-target" /></div>
+            <div><Label>WhatsApp do responsável</Label><Input value={form.responsavel_whatsapp} onChange={e => setForm({...form, responsavel_whatsapp: e.target.value})} placeholder="(11) 99999-9999" required className="touch-target" /></div>
+            <div><Label>Endereço de embarque</Label><Input value={form.endereco_embarque} onChange={e => setForm({...form, endereco_embarque: e.target.value})} className="touch-target" /></div>
+            <div><Label>Endereço de desembarque</Label><Input value={form.endereco_desembarque} onChange={e => setForm({...form, endereco_desembarque: e.target.value})} className="touch-target" /></div>
+            <div><Label>Escola</Label>
+              <Select value={form.escola} onValueChange={v => setForm({...form, escola: v})}>
+                <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione a escola" /></SelectTrigger>
+                <SelectContent>
+                  {escolas.map((e: any) => <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>)}
+                  {escolas.length === 0 && <SelectItem value="" disabled>Cadastre escolas em Ajustes</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Turno</Label>
+                <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
+                  <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
                   <SelectContent>
-                    {escolas.map((e: any) => <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>)}
+                    {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
+                    {turnos.length === 0 && <SelectItem value="" disabled>Cadastre turnos em Ajustes</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Turno</Label>
-                  <Select value={form.turno} onValueChange={v => setForm({...form, turno: v})}>
-                    <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione o turno" /></SelectTrigger>
+              <div><Label>Status</Label>
+                <Select value={form.status} onValueChange={v => setForm({...form, status: v})}>
+                  <SelectTrigger className="touch-target"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativo">Ativo</SelectItem>
+                    <SelectItem value="pausado">Pausado</SelectItem>
+                    <SelectItem value="desistente">Desistente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Mensalidade (R$)</Label><Input type="number" step="0.01" value={form.valor_mensalidade} onChange={e => setForm({...form, valor_mensalidade: e.target.value})} className="touch-target" /></div>
+              {rotas.length > 0 && (
+                <div><Label>Rota</Label>
+                  <Select value={form.rota_id} onValueChange={v => setForm({...form, rota_id: v})}>
+                    <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
-                      {turnos.map((t: any) => <SelectItem key={t.id} value={t.nome}>{t.nome}</SelectItem>)}
+                      {rotas.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                <div><Label>Status</Label>
-                  <Select value={form.status} onValueChange={v => setForm({...form, status: v})}>
-                    <SelectTrigger className="touch-target"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativo">Ativo</SelectItem>
-                      <SelectItem value="pausado">Pausado</SelectItem>
-                      <SelectItem value="desistente">Deixou o transporte</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              )}
+            </div>
+            
+            <div className="flex gap-2 pt-4">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="destructive" className="flex-1 gap-2">
+                    <Trash2 className="w-4 h-4" /> Excluir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. Isso excluirá permanentemente os dados do aluno e seu histórico financeiro.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteMutation.mutate(selectedAluno.id)} className="bg-destructive text-destructive-foreground">
+                      Confirmar Exclusão
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Mensalidade (R$)</Label><Input type="number" step="0.01" value={form.valor_mensalidade} onChange={e => setForm({...form, valor_mensalidade: e.target.value})} className="touch-target" /></div>
-                {rotas.length > 0 && (
-                  <div><Label>Rota</Label>
-                    <Select value={form.rota_id} onValueChange={v => setForm({...form, rota_id: v})}>
-                      <SelectTrigger className="touch-target"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>
-                        {rotas.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex flex-col gap-3 pt-4">
-                <Button type="submit" className="w-full font-bold" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-                </Button>
-                
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button type="button" variant="ghost" className="text-destructive font-bold">
-                      <Trash2 className="w-4 h-4 mr-2" /> Excluir Aluno
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                      <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteMutation.mutate(selectedAluno.id)} className="bg-destructive text-destructive-foreground">Confirmar Exclusão</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </form>
-          )}
+              <Button type="submit" className="flex-1 font-semibold" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </AppLayout>

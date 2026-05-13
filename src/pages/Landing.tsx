@@ -18,7 +18,11 @@ const Landing = () => {
   const navigate = useNavigate();
 
   const handleCTA = () => {
-    navigate('/auth/signup');
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
   };
 
   const depoimentos = [
@@ -54,7 +58,7 @@ const Landing = () => {
             <span className="text-xl font-black tracking-tight text-slate-900 uppercase italic">Vanzeiro</span>
           </div>
           <Button variant="ghost" className="font-bold text-slate-600 hover:text-primary" asChild>
-            <Link to={user ? "/dashboard" : "/auth/login"}>
+            <Link to={user ? "/dashboard" : "/login"}>
               {user ? "Ir para o Painel" : "Entrar"}
             </Link>
           </Button>
@@ -76,11 +80,6 @@ const Landing = () => {
               <Button onClick={handleCTA} size="lg" className="h-14 px-10 text-lg font-black shadow-xl shadow-primary/20 gap-2">
                 Começar Agora <ArrowRight className="w-5 h-5" />
               </Button>
-              {user && (
-                <Button variant="outline" size="lg" className="h-14 px-8 text-lg font-black" asChild>
-                  <Link to="/dashboard">Ir para o Painel</Link>
-                </Button>
-              )}
             </div>
 
             {/* Trust Badges */}
@@ -217,7 +216,7 @@ const Landing = () => {
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
           <div className="relative rounded-3xl overflow-hidden shadow-xl min-h-[260px] lg:min-h-[320px]">
             <img
-              src="/van-parceria.png"
+              src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80"
               alt="Motorista de van escolar em frente ao veículo"
               className="w-full h-full object-cover"
               loading="lazy"
@@ -241,16 +240,6 @@ const Landing = () => {
               <p className="text-slate-600 text-lg">
                 Comprou sua van na Zero Utilitários? Solicite seu cupom e profissionalize sua gestão sem custo por meio ano.
               </p>
-              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-                <a
-                  href="https://zeeroutilitarios.com.br"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex text-slate-900 text-lg font-black hover:underline"
-                >
-                  Ver ofertas na Zero Utilitários
-                </a>
-              </div>
             </div>
           </Card>
         </div>
@@ -327,9 +316,9 @@ const Landing = () => {
             </p>
           </div>
           <div className="flex flex-col md:flex-row gap-8 md:justify-end text-slate-500 font-bold text-sm uppercase tracking-widest">
-            <Link to="/termos-de-uso" className="hover:text-primary transition-colors">Termos de Uso</Link>
-            <Link to="/politica-de-privacidade" className="hover:text-primary transition-colors">Política de Privacidade</Link>
-            <span className="text-slate-300 font-normal">Copyright © 2026 Vanzeiro</span>
+            <Link to="#" className="hover:text-primary transition-colors">Termos de Uso</Link>
+            <Link to="#" className="hover:text-primary transition-colors">Política de Privacidade</Link>
+            <span className="text-slate-300 font-normal">Copyright © 2025 Vanzeiro</span>
           </div>
         </div>
       </footer>

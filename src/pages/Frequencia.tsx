@@ -34,12 +34,7 @@ const Frequencia = () => {
   const { data: alunos = [] } = useQuery({
     queryKey: ['alunos-freq', rotaId],
     queryFn: async () => {
-      let query = supabase
-        .from('alunos')
-        .select('id, nome, rota_id, rotas(nome)')
-        .eq('status', 'ativo')
-        .eq('user_id', user!.id)
-        .order('nome');
+      let query = supabase.from('alunos').select('id, nome, rota_id, rotas(nome)').eq('status', 'ativo').order('nome');
       if (rotaId !== 'todas') query = query.eq('rota_id', rotaId);
       const { data, error } = await query;
       if (error) throw error;
@@ -50,11 +45,7 @@ const Frequencia = () => {
   const { data: frequencias = [] } = useQuery({
     queryKey: ['frequencias', hoje],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('frequencias')
-        .select('*')
-        .eq('data', hoje)
-        .eq('user_id', user!.id);
+      const { data, error } = await supabase.from('frequencias').select('*').eq('data', hoje);
       if (error) throw error;
       return data;
     },
@@ -105,7 +96,6 @@ const Frequencia = () => {
         .from('alunos')
         .select('*')
         .eq('status', 'ativo')
-        .eq('user_id', user!.id)
         .order('nome');
       
       if (alunosError) throw alunosError;
@@ -117,8 +107,7 @@ const Frequencia = () => {
         .from('frequencias')
         .select('*')
         .gte('data', startDate)
-        .lte('data', endDate)
-        .eq('user_id', user!.id);
+        .lte('data', endDate);
 
       if (freqsError) throw freqsError;
 

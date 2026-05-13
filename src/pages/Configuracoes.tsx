@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { User, Truck, CreditCard, MessageCircle, School, MapPin, Clock, Plus, Trash2, Settings2, ShieldCheck, ArrowRight } from 'lucide-react';
+import { User, Truck, CreditCard, MessageCircle, School, MapPin, Clock, Plus, Trash2, Settings2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
 // Componente reutilizável para gerenciar listas de parâmetros
@@ -140,29 +140,42 @@ const Configuracoes = () => {
     },
   });
 
-  // --- Escolas (LocalStorage) ---
-  const [escolas, setEscolas] = useState<{ id: string; nome: string }[]>(() => {
-    try { return JSON.parse(localStorage.getItem('vanzeiro_escolas') || '[]'); } catch { return []; }
+  // --- Escolas ---
+  const { data: escolas = [] } = useQuery({
+    queryKey: ['escolas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('escolas').select('*').order('nome');
+      if (error) throw error;
+      return data as { id: string; nome: string }[];
+    },
   });
 
-  const handleAddEscola = (nome: string) => {
-    const novas = [...escolas, { id: Date.now().toString() + Math.random(), nome }];
-    setEscolas(novas);
-    localStorage.setItem('vanzeiro_escolas', JSON.stringify(novas));
-    toast({ title: 'Escola adicionada!' });
-  };
+  const addEscolaMutation = useMutation({
+    mutationFn: async (nome: string) => {
+      const { error } = await supabase.from('escolas').insert({ user_id: user!.id, nome });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['escolas'] });
+      toast({ title: 'Escola adicionada!' });
+    },
+    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
+  });
 
-  const handleDeleteEscola = (id: string) => {
-    const novas = escolas.filter(e => e.id !== id);
-    setEscolas(novas);
-    localStorage.setItem('vanzeiro_escolas', JSON.stringify(novas));
-  };
+  const deleteEscolaMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('escolas').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['escolas'] }),
+    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
+  });
 
   // --- Rotas ---
   const { data: rotas = [] } = useQuery({
     queryKey: ['rotas'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('rotas').select('*').eq('user_id', user!.id).order('nome');
+      const { data, error } = await supabase.from('rotas').select('*').order('nome');
       if (error) throw error;
       return data as { id: string; nome: string }[];
     },
@@ -170,7 +183,7 @@ const Configuracoes = () => {
 
   const addRotaMutation = useMutation({
     mutationFn: async (nome: string) => {
-      const { error } = await supabase.from('rotas').insert({ user_id: user!.id, nome, turno: 'manha' });
+      const { error } = await supabase.from('rotas').insert({ user_id: user!.id, nome });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -189,46 +202,35 @@ const Configuracoes = () => {
     onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
   });
 
-  // --- Turnos (LocalStorage) ---
-  const [turnos, setTurnos] = useState<{ id: string; nome: string }[]>(() => {
-    try { return JSON.parse(localStorage.getItem('vanzeiro_turnos') || '[]'); } catch { return []; }
+  // --- Turnos ---
+  const { data: turnos = [] } = useQuery({
+    queryKey: ['turnos'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('turnos').select('*').order('nome');
+      if (error) throw error;
+      return data as { id: string; nome: string }[];
+    },
   });
 
-  const handleAddTurno = (nome: string) => {
-    const novas = [...turnos, { id: Date.now().toString() + Math.random(), nome }];
-    setTurnos(novas);
-    localStorage.setItem('vanzeiro_turnos', JSON.stringify(novas));
-    toast({ title: 'Turno adicionado!' });
-  };
-
-  const handleDeleteTurno = (id: string) => {
-    const novas = turnos.filter(t => t.id !== id);
-    setTurnos(novas);
-    localStorage.setItem('vanzeiro_turnos', JSON.stringify(novas));
-  };
-
-
-
-  const manageSubscriptionMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('create-customer-portal', {
-        body: {
-          returnUrl: `${window.location.origin}/configuracoes`,
-        },
-      });
-
+  const addTurnoMutation = useMutation({
+    mutationFn: async (nome: string) => {
+      const { error } = await supabase.from('turnos').insert({ user_id: user!.id, nome });
       if (error) throw error;
-      if (!data?.url) throw new Error('Não foi possível gerar o link do portal Stripe.');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['turnos'] });
+      toast({ title: 'Turno adicionado!' });
+    },
+    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
+  });
 
-      window.location.assign(data.url);
+  const deleteTurnoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('turnos').delete().eq('id', id);
+      if (error) throw error;
     },
-    onError: (error: any) => {
-      toast({
-        title: 'Erro ao abrir portal',
-        description: error.message ?? 'Não foi possível abrir o portal da assinatura.',
-        variant: 'destructive',
-      });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['turnos'] }),
+    onError: (error: any) => toast({ title: 'Erro', description: error.message, variant: 'destructive' }),
   });
 
   return (
@@ -341,13 +343,13 @@ const Configuracoes = () => {
 
             <div className="border-t border-border pt-4">
               <ParamList
-                title="Escolas (Cadastros Livres)"
+                title="Escolas"
                 icon={School}
                 items={escolas}
-                onAdd={handleAddEscola}
-                onDelete={handleDeleteEscola}
+                onAdd={nome => addEscolaMutation.mutate(nome)}
+                onDelete={id => deleteEscolaMutation.mutate(id)}
                 placeholder="Nome da escola..."
-                isAdding={false}
+                isAdding={addEscolaMutation.isPending}
               />
             </div>
 
@@ -365,34 +367,15 @@ const Configuracoes = () => {
 
             <div className="border-t border-border pt-4">
               <ParamList
-                title="Turnos (Cadastros Livres)"
+                title="Turnos"
                 icon={Clock}
                 items={turnos}
-                onAdd={handleAddTurno}
-                onDelete={handleDeleteTurno}
-                placeholder="Ex: Manhã, Tarde, Integral, Noite..."
-                isAdding={false}
+                onAdd={nome => addTurnoMutation.mutate(nome)}
+                onDelete={id => deleteTurnoMutation.mutate(id)}
+                placeholder="Ex: Manhã, Tarde, Integral..."
+                isAdding={addTurnoMutation.isPending}
               />
             </div>
-          </Card>
-
-          <Card className="p-4 space-y-4">
-            <div className="flex items-center gap-2 text-primary font-bold">
-              <ShieldCheck className="w-5 h-5" />
-              <span>Minha Assinatura</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Gerencie cobrança com segurança no Stripe. Você pode cancelar, trocar cartão ou atualizar método de pagamento.
-            </p>
-            <Button
-              type="button"
-              className="w-full touch-target font-bold gap-2"
-              onClick={() => manageSubscriptionMutation.mutate()}
-              disabled={manageSubscriptionMutation.isPending}
-            >
-              {manageSubscriptionMutation.isPending ? 'Gerando link seguro...' : 'Gerenciar Assinatura'}
-              <ArrowRight className="w-4 h-4" />
-            </Button>
           </Card>
         </div>
       )}

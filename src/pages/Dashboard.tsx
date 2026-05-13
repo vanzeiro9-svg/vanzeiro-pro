@@ -1,159 +1,70 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { AlertTriangle, CreditCard, FileWarning, LogOut, ShieldAlert, TrendingUp, Users, Wallet } from 'lucide-react';
+import { Users, AlertTriangle, FileWarning, LogOut, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/components/AppLayout';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-  const mesCorrente = new Date().toISOString().slice(0, 7); // YYYY-MM
-  const periodoLabel = new Date(`${mesCorrente}-02`).toLocaleDateString('pt-BR', {
-    month: 'long',
-    year: 'numeric',
-  });
 
-  const { data: stats, error: statsError, isLoading: isStatsLoading } = useQuery({
-    queryKey: ['dashboard-stats', mesCorrente],
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const year = parseInt(mesCorrente.split('-')[0]);
-      const month = parseInt(mesCorrente.split('-')[1]);
-      const lastDay = new Date(year, month, 0).getDate();
-
-      const [alunosRes, mensalidadesRes, docsRes, despesasRes] = await Promise.all([
-        supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo').eq('user_id', user!.id),
-        supabase.from('mensalidades').select('valor, status').eq('mes_referencia', mesCorrente).eq('user_id', user!.id),
-        supabase.from('documentos').select('*').eq('user_id', user!.id),
-        supabase.from('despesas').select('valor').gte('data_despesa', `${mesCorrente}-01`).lte('data_despesa', `${mesCorrente}-${lastDay}`).eq('usuario_id', user!.id),
+      const [alunosRes, mensalidadesRes, docsRes] = await Promise.all([
+        supabase.from('alunos').select('id', { count: 'exact' }).eq('status', 'ativo'),
+        supabase.from('mensalidades').select('valor').in('status', ['pendente', 'atrasado']),
+        supabase.from('documentos').select('*'),
       ]);
 
-      const errors = [
-        ['alunos', alunosRes.error],
-        ['mensalidades', mensalidadesRes.error],
-        ['documentos', docsRes.error],
-        ['despesas', despesasRes.error],
-      ].filter(([, e]) => Boolean(e)) as Array<[string, NonNullable<typeof alunosRes.error>]>;
-
-      if (errors.length > 0) {
-        const details = errors
-          .map(([table, e]) => `${table}: ${e.message}${e.code ? ` (${e.code})` : ''}`)
-          .join(' | ');
-        throw new Error(
-          `Falha ao carregar dados do dashboard. ${details}.`
-        );
-      }
-
       const now = new Date();
-      now.setHours(0, 0, 0, 0);
       const in30days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-      // Pega apenas o doc mais recente por tipo antes de filtrar
-      const latestByTipo: Record<string, any> = {};
-      (docsRes.data || []).forEach((d) => {
-        if (!latestByTipo[d.tipo] || new Date(d.created_at) > new Date(latestByTipo[d.tipo].created_at)) {
-          latestByTipo[d.tipo] = d;
-        }
-      });
-      const docsLatest = Object.values(latestByTipo);
-
-      const docsVencendo = docsLatest.filter((d) => {
-        if (!d.data_vencimento) return false;
-        const venc = new Date(d.data_vencimento + 'T00:00:00');
+      const docsVencendo = (docsRes.data || []).filter((d) => {
+        const venc = new Date(d.data_vencimento);
         return venc <= in30days;
       });
 
-      const docsVencidos = docsLatest.filter((d) => {
-        if (!d.data_vencimento) return false;
-        const venc = new Date(d.data_vencimento + 'T00:00:00');
+      const totalReceber = (mensalidadesRes.data || []).reduce((acc, curr) => acc + Number(curr.valor), 0);
+
+      const hasExpiredDoc = (docsRes.data || []).some((d) => {
+        const venc = new Date(d.data_vencimento);
         return venc < now;
       });
 
-      const receitaBruta = (mensalidadesRes.data || [])
-        .filter((m) => m.status === 'pago')
-        .reduce((acc, curr) => acc + Number(curr.valor), 0);
-
-      const inadimplencia = (mensalidadesRes.data || [])
-        .filter((m) => m.status === 'atrasado')
-        .reduce((acc, curr) => acc + Number(curr.valor), 0);
-
-      const despesasTotais = (despesasRes.data || [])
-        .reduce((acc, curr) => acc + Number(curr.valor), 0);
-      const lucroLiquido = receitaBruta - despesasTotais;
-
-      const hasExpiredDoc = docsVencidos.length > 0;
-
       return {
-        periodo: periodoLabel,
         totalAlunos: alunosRes.count || 0,
-        receitaBruta,
-        despesasTotais,
-        lucroLiquido,
-        inadimplencia,
-        chartData: [
-          { nome: 'Receitas', valor: receitaBruta },
-          { nome: 'Despesas', valor: despesasTotais },
-        ],
+        totalReceber,
         docsVencendo: docsVencendo.length,
-        docsVencidos: docsVencidos.length,
-        docsCriticos: docsVencendo.length,
         docsUrgentes: docsVencendo.slice(0, 3),
         hasExpiredDoc,
       };
     },
   });
 
-  const formatCurrency = (value: number) =>
-    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
   const cards = [
     {
       label: 'Alunos Ativos',
-      value: stats?.totalAlunos ?? 0,
+      value: stats?.totalAlunos ?? '-',
       icon: Users,
       color: 'text-primary',
       bg: 'bg-primary/10',
     },
     {
-      label: 'Documentos a vencer',
-      value: stats?.docsVencendo ?? 0,
-      icon: FileWarning,
-      color: 'text-warning',
-      bg: 'bg-warning/10',
-    },
-    {
-      label: 'Receita Bruta',
-      value: formatCurrency(stats?.receitaBruta ?? 0),
-      icon: Wallet,
-      color: 'text-emerald-700',
-      bg: 'bg-emerald-100',
-    },
-    {
-      label: 'Despesas Totais',
-      value: formatCurrency(stats?.despesasTotais ?? 0),
-      icon: CreditCard,
-      color: 'text-rose-700',
-      bg: 'bg-rose-100',
-      link: '/despesas',
-    },
-    {
-      label: 'Lucro Líquido',
-      value: formatCurrency(stats?.lucroLiquido ?? 0),
-      icon: TrendingUp,
-      color: (stats?.lucroLiquido ?? 0) >= 0 ? 'text-blue-700' : 'text-amber-700',
-      bg: (stats?.lucroLiquido ?? 0) >= 0 ? 'bg-blue-100' : 'bg-amber-100',
-    },
-    {
-      label: 'Inadimplência (vencidas)',
-      value: formatCurrency(stats?.inadimplencia ?? 0),
+      label: 'Total a Receber no Mês',
+      value: stats?.totalReceber ? `R$ ${stats.totalReceber.toFixed(2)}` : 'R$ 0,00',
       icon: AlertTriangle,
       color: 'text-destructive',
       bg: 'bg-destructive/10',
+    },
+    {
+      label: 'Status Legal (Docs)',
+      value: stats?.docsVencendo ?? '-',
+      icon: FileWarning,
+      color: 'text-warning',
+      bg: 'bg-warning/10',
     },
   ];
 
@@ -163,19 +74,8 @@ const Dashboard = () => {
         <div>
           <h1 className="text-xl font-bold text-foreground">Olá! 👋</h1>
           <p className="text-sm text-muted-foreground">{user?.email}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Período financeiro: <span className="font-semibold capitalize">{stats?.periodo ?? periodoLabel}</span>
-          </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={async () => {
-            await signOut();
-            navigate('/', { replace: true });
-          }}
-          className="touch-target"
-        >
+        <Button variant="ghost" size="icon" onClick={signOut} className="touch-target">
           <LogOut className="w-5 h-5" />
         </Button>
       </div>
@@ -190,90 +90,49 @@ const Dashboard = () => {
         </Alert>
       )}
 
-      {statsError && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTitle>Não foi possível carregar seus dados</AlertTitle>
-          <AlertDescription>
-            {statsError instanceof Error ? statsError.message : 'Erro desconhecido.'}
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="grid grid-cols-1 gap-3 mb-6">
-        {cards.map((card: any) => {
-          const content = (
-            <Card key={card.label} className={`p-4 flex items-center gap-4 animate-fade-in ${card.link ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.bg}`}>
-                <card.icon className={`w-6 h-6 ${card.color}`} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{card.value}</p>
-                <p className="text-sm text-muted-foreground">{card.label}</p>
-              </div>
-            </Card>
-          );
-          return card.link ? (
-            <div key={card.label} onClick={() => navigate(card.link)}>{content}</div>
-          ) : (
-            <div key={card.label}>{content}</div>
-          );
-        })}
+        {cards.map((card) => (
+          <Card key={card.label} className="p-4 flex items-center gap-4 animate-fade-in">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${card.bg}`}>
+              <card.icon className={`w-6 h-6 ${card.color}`} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{card.value}</p>
+              <p className="text-sm text-muted-foreground">{card.label}</p>
+            </div>
+          </Card>
+        ))}
       </div>
 
-      <Card className="p-4 mb-6">
-        <h2 className="text-base font-bold text-foreground mb-4">Receitas vs Despesas</h2>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={stats?.chartData ?? []}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="nome" />
-              <YAxis tickFormatter={(value) => `R$ ${Number(value).toLocaleString('pt-BR')}`} />
-              <Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
-              <Bar dataKey="valor" radius={[8, 8, 0, 0]} fill="hsl(var(--primary))" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      {stats?.docsCriticos != null && stats.docsCriticos > 0 && (
+      {stats?.docsUrgentes && stats.docsUrgentes.length > 0 && (
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold text-foreground">⚠️ Documentos urgentes</h2>
-            <Link
-              to="/documentos?filtro=criticos"
-              className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full hover:bg-amber-100 transition-colors"
-            >
-              Ver todos ({stats.docsCriticos})
-            </Link>
-          </div>
+          <h2 className="text-base font-bold text-foreground mb-3">⚠️ Documentos urgentes</h2>
           <div className="space-y-2">
             {stats.docsUrgentes.map((doc: any) => {
-              const now = new Date(); now.setHours(0,0,0,0);
-              const venc = new Date(doc.data_vencimento + 'T00:00:00');
+              const venc = new Date(doc.data_vencimento);
+              const now = new Date();
               const dias = Math.ceil((venc.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
               const isVencido = dias < 0;
               return (
-                <Link key={doc.id} to="/documentos?filtro=criticos">
-                  <Card className="p-3 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer">
-                    <div>
-                      <p className="font-semibold text-sm text-foreground">{doc.tipo}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Vence: {venc.toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-xs font-bold px-2 py-1 rounded-full ${
-                        isVencido
-                          ? 'bg-destructive/10 text-destructive'
-                          : dias <= 7
-                          ? 'bg-destructive/10 text-destructive'
-                          : 'bg-warning/10 text-warning'
-                      }`}
-                    >
-                      {isVencido ? 'Vencido' : `em ${dias}d`}
-                    </span>
-                  </Card>
-                </Link>
+                <Card key={doc.id} className="p-3 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-sm text-foreground">{doc.tipo}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Vence: {venc.toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      isVencido
+                        ? 'bg-destructive/10 text-destructive'
+                        : dias <= 7
+                        ? 'bg-destructive/10 text-destructive'
+                        : 'bg-warning/10 text-warning'
+                    }`}
+                  >
+                    {isVencido ? 'Vencido' : `${dias} dias`}
+                  </span>
+                </Card>
               );
             })}
           </div>
