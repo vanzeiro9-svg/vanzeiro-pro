@@ -76,6 +76,42 @@ export type Database = {
           },
         ]
       }
+      despesas: {
+        Row: {
+          categoria: string
+          created_at: string
+          data_despesa: string
+          descricao: string
+          id: string
+          mes_referencia: string
+          recorrente: boolean
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          data_despesa?: string
+          descricao: string
+          id?: string
+          mes_referencia?: string
+          recorrente?: boolean
+          user_id: string
+          valor?: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data_despesa?: string
+          descricao?: string
+          id?: string
+          mes_referencia?: string
+          recorrente?: boolean
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       documentos: {
         Row: {
           arquivo_url: string | null
@@ -102,6 +138,27 @@ export type Database = {
           id?: string
           status?: string
           tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      escolas: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
           user_id?: string
         }
         Relationships: []
@@ -226,6 +283,27 @@ export type Database = {
           id?: string
           nome?: string
           turno?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      turnos: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
           user_id?: string
         }
         Relationships: []
